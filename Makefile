@@ -5,14 +5,14 @@ LFLAGS := $(LFLAGS) -lm -pthread
 all: fbrussia
 
 fbrussia: fb.o game.o
-	echo LD $@
-	@$(CC) $(LFLAGS) -o $@ $^
+	@echo LD $@
+	@$(CC) -o $@ $^ $(LFLAGS)
+
+fb.o game.o: fb.h
 
 %.o: %.c
-	echo CC $@
-	@$(CC) $(CFLAGS) -o $@ -c $^
-
-fb.c game.c: fb.h
+	@echo CC $@
+	@$(CC) -o $@ -c $< $(CFLAGS)
 
 clean:
 	@echo $@
