@@ -170,6 +170,12 @@ void game_render(void) {
 		fb_fill_rect(FB_W - 100, 0, 100, 100, 0xffff0000); // right top
 		fb_fill_rect(FB_W - 100, FB_H - 100, 100, 100, 0xffff0000); // right bottom
 		fb_fill_rect(100, 100, FB_W - 200, FB_H - 200, 0xffff0000); // center
+
+		fb_draw_oval(100, 100, FB_W - 200, FB_H - 200, 0xff00ff00, 1); // draw oval in center
+		fb_fill_oval((FB_W - 200) / 2, 0, 200, 100, 0xff00ffff); // fill oval in top center
+		fb_fill_oval(0, (FB_H - 200) / 2, 100, 200, 0xff00ffff); // fill oval in left center
+		fb_fill_oval((FB_W - 100) / 2, (FB_H - 100) / 2, 100, 100, 0xff00ffff); // fill oval in left center
+		fb_draw_oval((FB_W - 150) / 2, (FB_H - 150) / 2, 150, 150, 0xff00ffff, 2); // fill oval in left center
 		
 		fb_draw_line(0, 0, 100, 100, 0xff0000ff, 1);
 		fb_draw_line(0, 0, 100, 200, 0xff0000ff, 1);

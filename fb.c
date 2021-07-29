@@ -207,3 +207,79 @@ void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight
 		}
 	}
 }
+
+void fb_fill_oval(int x, int y, int width, int height, unsigned int color) {
+	char *p, *p2;
+	double a, b;
+	double fx1,fx2,fy1,fy2;
+	double f;
+
+	FB_ASSERT;
+	FB_ASSERT_RECT(x, y, width, height);
+
+	a = width / 2.0f;
+	b = height / 2.0f;
+	if(a > b) {
+		f = sqrt(a * a - b * b);
+		fx1 = a - f;
+		fx2 = a + f;
+		fy1 = fy2 = b;
+		f = 2.0f * a;
+	} else {
+		f = sqrt(b * b - a * a);
+		fx1 = fx2 = a;
+		fy1 = b - f;
+		fy2 = b + f;
+		f = 2.0f * b;
+	}
+	
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < height; y ++) {
+		p = p2;
+		for(x = 0; x < width; x ++) {
+			a = sqrt(pow(x - fx1, 2) + pow(y - fy1, 2)) + sqrt(pow(x - fx2, 2) + pow(y - fy2, 2));
+			if(a <= f) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
+		}
+		p2 += fb_xsize;
+	}
+}
+
+void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int weight) {
+	char *p, *p2;
+	double a, b;
+	double fx1,fx2,fy1,fy2;
+	double f;
+
+	FB_ASSERT;
+	FB_ASSERT_RECT(x, y, width, height);
+
+	a = width / 2.0f;
+	b = height / 2.0f;
+	if(a > b) {
+		f = sqrt(a * a - b * b);
+		fx1 = a - f;
+		fx2 = a + f;
+		fy1 = fy2 = b;
+		f = 2.0f * a;
+	} else {
+		f = sqrt(b * b - a * a);
+		fx1 = fx2 = a;
+		fy1 = b - f;
+		fy2 = b + f;
+		f = 2.0f * b;
+	}
+	
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < height; y ++) {
+		p = p2;
+		for(x = 0; x < width; x ++) {
+			a = sqrt(pow(x - fx1, 2) + pow(y - fy1, 2)) + sqrt(pow(x - fx2, 2) + pow(y - fy2, 2)) - f;
+			if(a < 0) a = -a;
+			if(a < weight) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
+		}
+		p2 += fb_xsize;
+	}
+}
+

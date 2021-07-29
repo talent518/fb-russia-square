@@ -3,6 +3,7 @@ CFLAGS := $(CFLAGS) -Wall -O3
 LFLAGS := $(LFLAGS) -lm -pthread
 
 all: fbrussia
+	@echo -n
 
 fbrussia: fb.o game.o
 	@echo LD $@
