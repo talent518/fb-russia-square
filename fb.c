@@ -91,8 +91,8 @@ int fb_free(void) {
 }
 
 void fb_sync(void) {
-	register char *p, *p2;
-	register int i;
+	char *p, *p2;
+	int i;
 	
 	p = fb_newbuf;
 	p2 = fb_addr;
@@ -105,8 +105,8 @@ void fb_sync(void) {
 }
 
 int fb_save(void) {
-	register char *p, *p2;
-	register int i;
+	char *p, *p2;
+	int i;
 
 	FB_ASSERT;
 
@@ -128,8 +128,8 @@ int fb_save(void) {
 }
 
 int fb_restore(void) {
-	register char *p, *p2;
-	register int i;
+	char *p, *p2;
+	int i;
 
 	FB_ASSERT;
 	if(fb_oldbuf == NULL) return FB_ERR;
@@ -169,42 +169,58 @@ void fb_fill_rect(int x, int y, int width, int height, unsigned int color) {
 	}
 }
 
+void fb_draw_rect(int x, int y, int width, int height, unsigned int color, int weight) {
+	char *p, *p2;
+
+	FB_ASSERT;
+	FB_ASSERT_RECT(x, y, width, height);
+	
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < height; y ++) {
+		p = p2;
+		for(x = 0; x < width; x ++) {
+			if(y < weight || y >= height - weight || x < weight || x >= width - weight) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
+		}
+		p2 += fb_xsize;
+	}
+}
+
 void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight) {
-	register int x, y;
-	register char *p;
+	int x, y;
+	char *p, *p2;
 	int minX, minY;
 	int maxX, maxY;
+	int width, height;
+	int cx, cy;
 
 	FB_ASSERT_POINT(x1, y1);
 	FB_ASSERT_POINT(x2, y2);
 
-	if(x1 == x2) {
-		minY = min(y1, y2);
-		maxY = max(y1, y2);
-		
-		p = fb_newbuf + minY * fb_xsize + x1 * fb_bpp / 8;
-		for(y = minY; y <= maxY; y++) {
-			memcpy(p, &color, fb_bpp / 8);
-			p += fb_xsize;
-		}
-	} else {
-		minX = min(x1, x2);
-		maxX = max(x1, x2);
+	minX = min(x1, x2);
+	minY = min(y1, y2);
 
-		if(y1 == y2) {
-			p = fb_newbuf + y1 * fb_xsize + minX * fb_bpp / 8;
-			for(x = minX; x <= maxX; x ++) {
-				memcpy(p, &color, fb_bpp / 8);
-				p += fb_bpp / 8;
-			}
-		} else {
-			double k = (double) (y2-y1) / (double) (x2-x1);
-			for(x = minX; x <= maxX; x ++) {
-				y = k * (x - x1) + y1;
-				p = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
-				memcpy(p, &color, fb_bpp / 8);
-			}
+	maxX = max(x1, x2);
+	maxY = max(y1, y2);
+	
+	x = minX - weight / 2;
+	y = minY - weight / 2;
+	width = maxX - minX + weight;
+	height = maxY - minY + weight;
+	cx = x1 - x2;
+	cy = y1 - y2;
+	
+	x1 -= minX;
+	y1 -= minY;
+
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < height; y ++) {
+		p = p2;
+		for(x = 0; x < width; x ++) {
+			if((x == x1 && x == x2) || (y == y1 && y == y2) || abs(x*cy-y*cx-x1*cy+y1*cx)/sqrt((double)(cy*cy+cx*cx)) <= weight / 2.0f) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
 		}
+		p2 += fb_xsize;
 	}
 }
 
@@ -275,8 +291,53 @@ void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int w
 		p = p2;
 		for(x = 0; x < width; x ++) {
 			a = sqrt(pow(x - fx1, 2) + pow(y - fy1, 2)) + sqrt(pow(x - fx2, 2) + pow(y - fy2, 2)) - f;
-			if(a < 0) a = -a;
-			if(a < weight) memcpy(p, &color, fb_bpp / 8);
+			if(a <= 0 && a >= -weight*2.0f) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
+		}
+		p2 += fb_xsize;
+	}
+}
+
+void fb_fill_circle(int x, int y, int radius, unsigned int color) {
+	char *p, *p2;
+	int side = radius * 2;
+	x -= radius;
+	y -= radius;
+	
+	printf("x: %d, y: %d, side: %d\n", x, y, side);
+
+	FB_ASSERT;
+	FB_ASSERT_RECT(x, y, side, side);
+	
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < side; y ++) {
+		p = p2;
+		for(x = 0; x < side; x ++) {
+			if(sqrt(pow(x - radius, 2) + pow(y - radius, 2)) <= radius) memcpy(p, &color, fb_bpp / 8);
+			p += fb_bpp / 8;
+		}
+		p2 += fb_xsize;
+	}
+}
+
+void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight) {
+	char *p, *p2;
+	int side = radius * 2;
+	int r;
+	x -= radius;
+	y -= radius;
+	
+	printf("x: %d, y: %d, side: %d\n", x, y, side);
+
+	FB_ASSERT;
+	FB_ASSERT_RECT(x, y, side, side);
+	
+	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+	for(y = 0; y < side; y ++) {
+		p = p2;
+		for(x = 0; x < side; x ++) {
+			r = sqrt(pow(x - radius, 2) + pow(y - radius, 2));
+			if(r <= radius && r >= radius - weight) memcpy(p, &color, fb_bpp / 8);
 			p += fb_bpp / 8;
 		}
 		p2 += fb_xsize;

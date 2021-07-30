@@ -2,10 +2,14 @@ CC := gcc
 CFLAGS := $(CFLAGS) -Wall -O3
 LFLAGS := $(LFLAGS) -lm -pthread
 
-all: fbrussia
+all: fbrussia fbtest
 	@echo -n
 
 fbrussia: fb.o game.o
+	@echo LD $@
+	@$(CC) -o $@ $^ $(LFLAGS)
+
+fbtest: fb.o test.o
 	@echo LD $@
 	@$(CC) -o $@ $^ $(LFLAGS)
 

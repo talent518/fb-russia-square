@@ -25,12 +25,14 @@ void fb_sync(void);
 void fb_fill_rect(int x, int y, int width, int height, unsigned int color);
 void fb_fill_round_rect(int x, int y, int width, int height, unsigned int color, int corner);
 void fb_fill_oval(int x, int y, int width, int height, unsigned int color);
+void fb_fill_circle(int x, int y, int radius, unsigned int color);
 
 void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight);
 
 void fb_draw_rect(int x, int y, int width, int height, unsigned int color, int weight);
 void fb_draw_round_rect(int x, int y, int width, int height, unsigned int color, int weight, int corner);
 void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int weight);
+void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight);
 
 #endif
 

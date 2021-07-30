@@ -156,51 +156,12 @@ void game_key(int key) {
 	}
 }
 
-#define FB_W (fb_width - 1)
-#define FB_H (fb_height - 1)
-
 static bool is_bg = true;
 
 void game_render(void) {
 	if(is_bg) {
-		fb_fill_rect(0, 0, fb_width, fb_height, 0xffffffff); // background
-
-		fb_fill_rect(0, 0, 100, 100, 0xffff0000); // left top
-		fb_fill_rect(0, FB_H - 100, 100, 100, 0xffff0000); // left bottom
-		fb_fill_rect(FB_W - 100, 0, 100, 100, 0xffff0000); // right top
-		fb_fill_rect(FB_W - 100, FB_H - 100, 100, 100, 0xffff0000); // right bottom
-		fb_fill_rect(100, 100, FB_W - 200, FB_H - 200, 0xffff0000); // center
-
-		fb_draw_oval(100, 100, FB_W - 200, FB_H - 200, 0xff00ff00, 1); // draw oval in center
-		fb_fill_oval((FB_W - 200) / 2, 0, 200, 100, 0xff00ffff); // fill oval in top center
-		fb_fill_oval(0, (FB_H - 200) / 2, 100, 200, 0xff00ffff); // fill oval in left center
-		fb_fill_oval((FB_W - 100) / 2, (FB_H - 100) / 2, 100, 100, 0xff00ffff); // fill oval in left center
-		fb_draw_oval((FB_W - 150) / 2, (FB_H - 150) / 2, 150, 150, 0xff00ffff, 2); // fill oval in left center
 		
-		fb_draw_line(0, 0, 100, 100, 0xff0000ff, 1);
-		fb_draw_line(0, 0, 100, 200, 0xff0000ff, 1);
-		fb_draw_line(0, 0, 100, 300, 0xff0000ff, 1);
-		fb_draw_line(0, 0, 200, 100, 0xff0000ff, 1);
-		fb_draw_line(0, 0, 300, 100, 0xff0000ff, 1);
 		
-		{
-			int x = (FB_W / 2), y = (FB_H / 2);
-			int r = min(FB_W / 3, FB_H / 3);
-			int x1 = x, y1 = y - r;
-			int x2, y2;
-			int i;
-			double rad;
-
-			for(i = 144; i <= 720; i += 144 ) {
-				rad = (90 + i) * M_PI / 180.0;
-				x2 = r * cos(rad) + x;
-				y2 = - r * sin(rad) + y;
-				fb_draw_line(x1, y1, x2, y2, 0xff00ff00, 1);
-				x1 = x2;
-				y1 = y2;
-			}
-		}
-
 		is_bg = false;
 	}
 }
