@@ -8,8 +8,10 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <math.h>
 #include <time.h>
@@ -60,12 +62,20 @@ int main(int argc, char *argv[]) {
 	// Single character key for one-time reading
 	tcgetattr(0, &oldset);
 	memcpy(&newset, &oldset, sizeof(oldset));
-	newset.c_lflag &= (~ICANON);
+	newset.c_lflag &= ~(ICANON|ECHO|ECHOE|ECHOK|ECHOPRT|ECHOKE|ICRNL);
 	newset.c_cc[VTIME] = 0;
 	newset.c_cc[VMIN] = 1;
 	tcsetattr(0, TCSANOW, &newset);
-
-	if(write(0, " ", 1) <= 0) pprintf("write");
+	
+	{
+		int flag = fcntl(0, F_GETFL);
+		if(flag == -1) {
+			eprintf("fcntl F_GETFL");
+		} else {
+			flag |= O_NONBLOCK;
+			if(fcntl(0, F_SETFL, flag) == -1) eprintf("fcntl F_GETFL");
+		}
+	}
 	
 	signal(SIGALRM, signal_handler);
 	game_timer();
@@ -120,19 +130,30 @@ void game_key_fall(void);
 void game_start(void);
 void game_pause(void);
 
+static int key_idx = 0;
 void game_key(int key) {
-	dprintf("        \r");
+	if(key == 0x1b) {
+		key_idx = 2;
+		dprintf("KEY [%02x]\n", key);
+		return;
+	} else if(key_idx > 0) {
+		dprintf("KEY [%02x]\n", key);
+		if(key == 0x5b) key_idx = 2;
+		else if(key == 0x4f) key_idx = 1;
+		else --key_idx;
+		return;
+	} else {
+		dprintf("KEY {%02x}\n", key);
+	}
 	switch(key) {
 		case 'q':
 		case 'Q':
 			is_running = 0;
 			break;
 		case '[': // start game
-			dprintf("S       \r");
 			game_start();
 			break;
 		case ']': // pause game
-			dprintf("P       \r");
 			game_pause();
 			break;
 		case '4':
@@ -140,7 +161,6 @@ void game_key(int key) {
 		case 'A':
 		case 'j':
 		case 'J': // left move
-			dprintf("L       \r");
 			game_key_left();
 			break;
 		case '6':
@@ -148,7 +168,6 @@ void game_key(int key) {
 		case 'D':
 		case 'l':
 		case 'L': // right move
-			dprintf("R       \r");
 			game_key_right();
 			break;
 		case '5':
@@ -156,7 +175,6 @@ void game_key(int key) {
 		case 'S':
 		case 'k':
 		case 'K': // down move
-			dprintf("D       \r");
 			game_key_down();
 			break;
 		case '8':
@@ -164,16 +182,13 @@ void game_key(int key) {
 		case 'W':
 		case 'i':
 		case 'I': // transshape
-			dprintf("T       \r");
 			game_key_trans();
 			break;
 		case ' ':
 		case '0':
-			dprintf("_       \r");
 			game_key_fall();
 			break;
 		default:
-			dprintf("        \r");
 			break;
 	}
 }
