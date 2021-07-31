@@ -13,7 +13,7 @@ fbtest: fb.o test.o
 	@echo LD $@
 	@$(CC) -o $@ $^ $(LFLAGS)
 
-fb.o game.o: fb.h
+fb.o game.o test.o: fb.h
 
 %.o: %.c
 	@echo CC $@

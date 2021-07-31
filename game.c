@@ -109,10 +109,10 @@ void game_timer(void) {
 	struct itimerval itv;
 
 	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 25000; // 25ms
+	itv.it_interval.tv_usec = 40000; // 40ms
 
 	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = 1000; // 30ms
+	itv.it_value.tv_usec = 5000; // 5ms
 
 	setitimer(ITIMER_REAL, &itv, NULL);
 }
@@ -176,6 +176,7 @@ void game_key(int key) {
 #define WS_PX 15
 #define HEIGHT_SHAPE_NUM 20
 #define WIDTH_SHAPE_NUM 10
+#define MAX_GRADE 25
 static const int SHAPES[] = {0x4444, 0x4460, 0x2260, 0x0C60, 0x06C0, 0x0660, 0x04E0};
 static const int SHAPE_NUM = sizeof(SHAPES) / sizeof(int);
 static const int COLORS[] = {0x33, 0x66, 0x99, 0xcc};
@@ -188,13 +189,13 @@ static int curShape, nextShape;
 static int curColor, nextColor;
 static int overColor;
 static bool endGame;
-static int maxGrade = 40;
+static int maxGrade = MAX_GRADE;
 static int idxGrade = 0;
 
 void game_alrm(void) {
 	if(++idxGrade >= maxGrade) {
 		idxGrade = 0;
-		game_render();
+		PROF(game_render);
 	}
 	fb_sync();
 }
@@ -229,7 +230,7 @@ void game_reset(void) {
 
 void game_init(void) {
 	game_reset();
-	
+
 	game_render();
 	fb_sync();
 }
@@ -251,7 +252,7 @@ void game_render(void) {
 	const int X = (fb_width - (WIDTH_SHAPE_NUM + 5) * side) / 2, Y = (fb_height - HEIGHT_SHAPE_NUM * side) / 2;
 	int x, y;
 	int x2, y2;
-	
+
 	// draw main box
 	for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
 		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {

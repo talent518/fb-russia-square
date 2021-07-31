@@ -34,5 +34,25 @@ void fb_draw_round_rect(int x, int y, int width, int height, unsigned int color,
 void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int weight);
 void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight);
 
+static inline double microtime() {
+	struct timeval tp = {0};
+
+	if (gettimeofday(&tp, NULL)) {
+		return 0;
+	}
+
+	return (double) tp.tv_sec + (double) tp.tv_usec / 1000000.0f;
+}
+
+#ifdef DPROF
+#	define PROF(f,args...) f(args)
+#else
+#	define PROF(f,args...) do { \
+		double __t = microtime(); \
+		f(args); \
+		printf(#f ": %lf\n", microtime() - __t); \
+	} while(0);
+#endif
+
 #endif
 
