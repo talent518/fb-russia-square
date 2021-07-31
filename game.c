@@ -602,6 +602,9 @@ void game_key_down(void) {
 
 	game_render();
 	fb_sync();
+
+	idxGrade = 0;
+	game_timer();
 }
 
 // fall
