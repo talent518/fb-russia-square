@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -30,6 +31,7 @@ static int fb_size = 0;
 static int fb_xoffset = 0, fb_xsize = 0;
 static char *fb_oldbuf = NULL, *fb_newbuf = NULL;
 
+static void init_font(void);
 int fb_init(const char *path) {
 	struct fb_var_screeninfo vinfo;
 
@@ -70,12 +72,17 @@ int fb_init(const char *path) {
 	}
 
 	if(fb_debug) fprintf(stderr, "size: %dx%d, bpp: %d, mmap: %p\n", fb_width, fb_height, fb_bpp, fb_addr);
+	
+	init_font();
 
 	return FB_OK;
 }
 
+static void free_font(void);
 int fb_free(void) {
 	FB_ASSERT;
+	
+	free_font();
 	
 	free(fb_newbuf);
 	fb_newbuf = NULL;
@@ -147,6 +154,81 @@ int fb_restore(void) {
 	fb_oldbuf = NULL;
 
 	return FB_OK;
+}
+
+#include "font_10x18.h"
+static unsigned char *font_data = NULL;
+
+static void init_font(void) {
+	unsigned char* bits;
+	if(font_data) return;
+
+	bits = malloc(font.width * font.height);
+	font_data = bits;
+	
+	unsigned char data;
+    unsigned char* in = font.rundata;
+    while((data = *in++)) {
+        memset(bits, (data & 0x80) ? 255 : 0, data & 0x7f);
+        bits += (data & 0x7f);
+    }
+}
+
+static void free_font(void) {
+	if(font_data) {
+		free(font_data);
+		font_data = NULL;
+	}
+}
+
+static bool outside(int x, int y) {
+    return x < 0 || x >= fb_width || y < 0 || y >= fb_height;
+}
+
+static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* dst_p, int dst_row_bytes, int width, int height, int color) {
+    int i, j;
+    for (j = 0; j < height; ++j) {
+        unsigned char* sx = src_p;
+        unsigned char* px = dst_p;
+        for (i = 0; i < width; ++i) {
+            unsigned char a = *sx++;
+            if (a == 255) {
+            	memcpy(px, &color, fb_bpp / 8);
+            } else if (a > 0) {
+            	int color2 = color | (a << 24);
+                memcpy(px, &color2, fb_bpp / 8);
+            }
+			px += fb_bpp / 8;
+        }
+        src_p += src_row_bytes;
+        dst_p += dst_row_bytes;
+    }
+}
+
+int fb_font_width() {
+	return font.cwidth;
+}
+
+int fb_font_height() {
+	return font.cheight;
+}
+
+void fb_text(int x, int y, const char *s, int color, int bold) {
+    unsigned off;
+    
+    bold = bold && (font.height != font.cheight);
+
+    while((off = *s++)) {
+        off -= 32;
+        if (outside(x, y) || outside(x + font.cwidth - 1, y + font.cheight - 1)) break;
+        if (off < 96) {
+            unsigned char* src_p = font_data + (off * font.cwidth) + (bold ? font.cheight * font.width : 0);
+            unsigned char* dst_p = (unsigned char*) fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
+
+            text_blend(src_p, font.width, dst_p, fb_xsize, font.cwidth, font.cheight, color);
+        }
+        x += font.cwidth;
+    }
 }
 
 #define FB_ASSERT_POINT(x,y) assert((x >= 0 && x < fb_width) && (y >= 0 && y < fb_height)) 

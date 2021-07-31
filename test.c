@@ -100,6 +100,9 @@ int main(int argc, char *argv[]) {
 				y1 = y2;
 			}
 		}
+		
+		fb_text(100, 75, "Hello World!", 0xff000000, 0);
+		fb_text(100, 100, "Hello World!", 0xff000000, 1);
 	}
 
 	fprintf(stdout, "\033[?25l"); // hide cursor

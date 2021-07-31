@@ -22,6 +22,11 @@ int fb_restore(void);
 
 void fb_sync(void);
 
+int fb_font_width();
+int fb_font_height();
+
+void fb_text(int x, int y, const char *s, int color, int bold);
+
 void fb_fill_rect(int x, int y, int width, int height, unsigned int color);
 void fb_fill_round_rect(int x, int y, int width, int height, unsigned int color, int corner);
 void fb_fill_oval(int x, int y, int width, int height, unsigned int color);
