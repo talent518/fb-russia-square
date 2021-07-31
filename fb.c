@@ -189,35 +189,25 @@ void fb_draw_rect(int x, int y, int width, int height, unsigned int color, int w
 void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight) {
 	int x, y;
 	char *p, *p2;
-	int minX, minY;
-	int maxX, maxY;
-	int width, height;
 	int cx, cy;
+	double x0, y0, radius;
 
 	FB_ASSERT_POINT(x1, y1);
 	FB_ASSERT_POINT(x2, y2);
-
-	minX = min(x1, x2);
-	minY = min(y1, y2);
-
-	maxX = max(x1, x2);
-	maxY = max(y1, y2);
 	
-	x = minX - weight / 2;
-	y = minY - weight / 2;
-	width = maxX - minX + weight;
-	height = maxY - minY + weight;
+	x0 = (x1 + x2) / 2.0f;
+	y0 = (y1 + y2) / 2.0f;
+	
 	cx = x1 - x2;
 	cy = y1 - y2;
 	
-	x1 -= minX;
-	y1 -= minY;
+	radius = sqrt(pow(x1 - x0, 2) + pow(y1 - y0, 2)) + weight;
 
-	p2 = fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
-	for(y = 0; y < height; y ++) {
+	p2 = fb_newbuf;
+	for(y = 0; y < fb_height; y ++) {
 		p = p2;
-		for(x = 0; x < width; x ++) {
-			if((x == x1 && x == x2) || (y == y1 && y == y2) || abs(x*cy-y*cx-x1*cy+y1*cx)/sqrt((double)(cy*cy+cx*cx)) <= weight / 2.0f) memcpy(p, &color, fb_bpp / 8);
+		for(x = 0; x < fb_width; x ++) {
+			if(sqrt(pow(x - x0, 2) + pow(y - y0, 2)) < radius && (cx || cy) && abs(x*cy-y*cx-x1*cy+y1*cx)/sqrt((double)(cy*cy+cx*cx)) <= weight / 2.0f) memcpy(p, &color, fb_bpp / 8);
 			p += fb_bpp / 8;
 		}
 		p2 += fb_xsize;
@@ -303,8 +293,6 @@ void fb_fill_circle(int x, int y, int radius, unsigned int color) {
 	int side = radius * 2;
 	x -= radius;
 	y -= radius;
-	
-	printf("x: %d, y: %d, side: %d\n", x, y, side);
 
 	FB_ASSERT;
 	FB_ASSERT_RECT(x, y, side, side);
@@ -324,10 +312,9 @@ void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight) {
 	char *p, *p2;
 	int side = radius * 2;
 	int r;
+
 	x -= radius;
 	y -= radius;
-	
-	printf("x: %d, y: %d, side: %d\n", x, y, side);
 
 	FB_ASSERT;
 	FB_ASSERT_RECT(x, y, side, side);
@@ -337,7 +324,7 @@ void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight) {
 		p = p2;
 		for(x = 0; x < side; x ++) {
 			r = sqrt(pow(x - radius, 2) + pow(y - radius, 2));
-			if(r <= radius && r >= radius - weight) memcpy(p, &color, fb_bpp / 8);
+			if(r < radius && r >= radius - weight) memcpy(p, &color, fb_bpp / 8);
 			p += fb_bpp / 8;
 		}
 		p2 += fb_xsize;
