@@ -282,7 +282,7 @@ void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight
 	int cx, cy;
 	int minX, maxX;
 	int minY, maxY;
-	double x0, y0, radius;
+	double x0, y0, radius, cR, cY;
 
 	FB_ASSERT_POINT(x1, y1);
 	FB_ASSERT_POINT(x2, y2);
@@ -293,12 +293,14 @@ void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight
 	cx = x1 - x2;
 	cy = y1 - y2;
 	
+	cR = sqrt((double)(cy*cy+cx*cx));
+	
 	radius = sqrt(pow(x1 - x0, 2) + pow(y1 - y0, 2)) + weight;
 	
-	minX = x0 - radius - weight;
-	maxX = x0 + radius + weight;
-	minY = y0 - radius - weight;
-	maxY = y0 + radius + weight;
+	minX = min(x1, x2) - weight * 2;
+	maxX = max(x1, x2) + weight * 2;
+	minY = min(y1, y2) - weight * 2;
+	maxY = max(y1, y2) + weight * 2;
 	if(minX < 0) minX = 0;
 	if(minY < 0) minY = 0;
 	if(maxX >= fb_width) maxX = fb_width - 1;
@@ -307,8 +309,9 @@ void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight
 	p2 = fb_newbuf + minY * fb_xsize + minX * fb_bpp / 8;
 	for(y = minY; y <= maxY; y ++) {
 		p = p2;
+		cY = pow(y - y0, 2);
 		for(x = minX; x <= maxX; x ++) {
-			if(sqrt(pow(x - x0, 2) + pow(y - y0, 2)) < radius && (cx || cy) && abs(x*cy-y*cx-x1*cy+y1*cx)/sqrt((double)(cy*cy+cx*cx)) <= weight / 2.0f) memcpy(p, &color, fb_bpp / 8);
+			if(sqrt(pow(x - x0, 2) + cY) < radius && (cx || cy) && abs(x*cy-y*cx-x1*cy+y1*cx)/cR <= weight / 2.0f) memcpy(p, &color, fb_bpp / 8);
 			p += fb_bpp / 8;
 		}
 		p2 += fb_xsize;

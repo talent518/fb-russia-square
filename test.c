@@ -47,6 +47,8 @@ int main(int argc, char *argv[]) {
 	if(fb_save() == FB_ERR) fprintf(stderr, "save failed\n");
 
 	{
+		double t;
+
 		fb_fill_rect(0, 0, fb_width, fb_height, 0xffffffff); // background
 
 		fb_fill_rect(0, 0, 100, 100, 0xffff0000); // left top
@@ -68,18 +70,25 @@ int main(int argc, char *argv[]) {
 		fb_fill_oval(0, (FB_H - 200) / 2, 100, 200, 0xff00ffff); // fill oval in left center
 		fb_fill_oval((FB_W - 100) / 2, (FB_H - 100) / 2, 100, 100, 0xff00ffff); // fill oval in center
 		fb_draw_oval((FB_W - 150) / 2, (FB_H - 150) / 2, 150, 150, 0xff00ffff, 2); // draw oval in center
-		
+
+		t = microtime();
+
 		fb_draw_line(0, 0, 100, 100, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 100, 200, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 100, 300, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 200, 100, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 300, 100, 0xff0000ff, 2);
 
+		printf("line %d: %lf\n", __LINE__, microtime() - t);
+		t = microtime();
+
 		fb_draw_line(0, FB_H / 2, FB_W - 1, FB_H / 2, 0xff0000ff, 2);
 		fb_draw_line(FB_W / 2, 0, FB_W / 2, FB_H - 1, 0xff0000ff, 2);
 
 		fb_draw_line(0, FB_H / 2 + 2, FB_W - 1, FB_H / 2 + 2, 0xff00ff00, 2);
 		fb_draw_line(FB_W / 2 + 2, 0, FB_W / 2 + 2, FB_H - 1, 0xff00ff00, 2);
+		
+		printf("line %d: %lf\n", __LINE__, microtime() - t);
 		
 		{
 			int x = (FB_W / 2), y = (FB_H / 2);
