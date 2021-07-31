@@ -34,8 +34,6 @@ static void signal_handler(int sig) {
 
 int main(int argc, char *argv[]) {
 	int ret;
-	
-	if(argc >= 3) fb_debug = atoi(argv[2]);
 
 	if(argc >= 2) ret = fb_init(argv[1]);
 	else ret = fb_init("/dev/fb0");
@@ -101,8 +99,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-		fb_text(100, 75, "Hello World!", 0xff000000, 0);
-		fb_text(100, 100, "Hello World!", 0xff000000, 1);
+		fb_text(100, 75, "Hello World!", 0xff000000, 0, 1);
+		fb_text(100, 100, "Hello World!", 0xff000000, 1, 2);
 	}
 
 	fprintf(stdout, "\033[?25l"); // hide cursor

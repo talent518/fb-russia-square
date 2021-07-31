@@ -12,7 +12,6 @@ typedef unsigned int uint;
 extern int fb_width;
 extern int fb_height;
 extern int fb_bpp;
-extern int fb_debug;
 
 int fb_init(const char *path);
 int fb_free(void);
@@ -25,7 +24,7 @@ void fb_sync(void);
 int fb_font_width();
 int fb_font_height();
 
-void fb_text(int x, int y, const char *s, int color, int bold);
+void fb_text(int x, int y, const char *s, int color, int bold, int size);
 
 void fb_fill_rect(int x, int y, int width, int height, unsigned int color);
 void fb_fill_round_rect(int x, int y, int width, int height, unsigned int color, int corner);
@@ -49,7 +48,7 @@ static inline double microtime() {
 	return (double) tp.tv_sec + (double) tp.tv_usec / 1000000.0f;
 }
 
-#ifdef DPROF
+#ifndef DPROF
 #	define PROF(f,args...) f(args)
 #else
 #	define PROF(f,args...) do { \
@@ -57,6 +56,16 @@ static inline double microtime() {
 		f(args); \
 		printf(#f ": %lf\n", microtime() - __t); \
 	} while(0);
+#endif
+
+#ifdef DEBUG
+#	define dprintf(fmt, args...) do {printf("[INFO] " fmt, ##args);fflush(stdout);} while(0)
+#	define eprintf(fmt, args...) do {fprintf(stderr, "[WARN] " fmt, ##args);fflush(stderr);} while(0)
+#	define pprintf(fmt, args...) do {fprintf(stderr, "[ ERR] " fmt ": %s\n", ##args, strerror(errno));fflush(stderr);} while(0)
+#else
+#	define dprintf(fmt, args...) while(0)
+#	define eprintf(fmt, args...) while(0)
+#	define pprintf(fmt, args...) while(0)
 #endif
 
 #endif

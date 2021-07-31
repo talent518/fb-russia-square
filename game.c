@@ -37,7 +37,7 @@ static void signal_handler(int sig) {
 			if(is_running) game_alrm();
 			break;
 		default:
-			printf("SIG: %d\n", sig);
+			dprintf("SIG: %d\n", sig);
 	}
 }
 
@@ -45,8 +45,6 @@ int main(int argc, char *argv[]) {
 	int ret;
 	struct timeval tv;
 	struct termios newset, oldset;
-	
-	if(argc >= 3) fb_debug = atoi(argv[2]);
 
 	if(argc >= 2) ret = fb_init(argv[1]);
 	else ret = fb_init("/dev/fb0");
@@ -57,7 +55,7 @@ int main(int argc, char *argv[]) {
 	signal(SIGTERM, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	if(fb_save() == FB_ERR) fprintf(stderr, "save failed\n");
+	if(fb_save() == FB_ERR) eprintf("save failed\n");
 	
 	// Single character key for one-time reading
 	tcgetattr(0, &oldset);
@@ -66,6 +64,8 @@ int main(int argc, char *argv[]) {
 	newset.c_cc[VTIME] = 0;
 	newset.c_cc[VMIN] = 1;
 	tcsetattr(0, TCSANOW, &newset);
+
+	if(write(0, " ", 1) <= 0) pprintf("write");
 	
 	signal(SIGALRM, signal_handler);
 	game_timer();
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
 		} else if(ret == 0) {
 			game_render();
 		} else if(errno != EINTR) {
-			perror("select stdin error");
+			pprintf("select stdin error");
 			is_running = 0;
 		}
 	};
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 	// restore old set
 	tcsetattr(0, TCSANOW, &oldset);
 
-	if(fb_restore() == FB_ERR) fprintf(stderr, "restore failed\n");
+	if(fb_restore() == FB_ERR) eprintf("restore failed\n");
 
 	fb_free();
 	return 0;
@@ -108,11 +108,8 @@ int main(int argc, char *argv[]) {
 void game_timer(void) {
 	struct itimerval itv;
 
-	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 40000; // 40ms
-
-	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = 5000; // 5ms
+	itv.it_interval.tv_sec = itv.it_value.tv_sec = 0;
+	itv.it_interval.tv_usec = itv.it_value.tv_usec = 40000; // 40ms
 
 	setitimer(ITIMER_REAL, &itv, NULL);
 }
@@ -122,20 +119,30 @@ void game_key_left(void);
 void game_key_right(void);
 void game_key_down(void);
 void game_key_fall(void);
+void game_start(void);
+void game_pause(void);
 
 void game_key(int key) {
-	printf("        \r");
+	dprintf("        \r");
 	switch(key) {
 		case 'q':
 		case 'Q':
 			is_running = 0;
+			break;
+		case '[': // start game
+			dprintf("S       \r");
+			game_start();
+			break;
+		case ']': // pause game
+			dprintf("P       \r");
+			game_pause();
 			break;
 		case '4':
 		case 'a':
 		case 'A':
 		case 'j':
 		case 'J': // left move
-			printf("L       \r");
+			dprintf("L       \r");
 			game_key_left();
 			break;
 		case '6':
@@ -143,7 +150,7 @@ void game_key(int key) {
 		case 'D':
 		case 'l':
 		case 'L': // right move
-			printf("R       \r");
+			dprintf("R       \r");
 			game_key_right();
 			break;
 		case '5':
@@ -151,7 +158,7 @@ void game_key(int key) {
 		case 'S':
 		case 'k':
 		case 'K': // down move
-			printf("D       \r");
+			dprintf("D       \r");
 			game_key_down();
 			break;
 		case '8':
@@ -159,16 +166,16 @@ void game_key(int key) {
 		case 'W':
 		case 'i':
 		case 'I': // transshape
-			printf("T       \r");
+			dprintf("T       \r");
 			game_key_trans();
 			break;
 		case ' ':
 		case '0':
-			printf("_       \r");
+			dprintf("_       \r");
 			game_key_fall();
 			break;
 		default:
-			printf("        \r");
+			dprintf("        \r");
 			break;
 	}
 }
@@ -184,11 +191,14 @@ static const int COLOR_NUM = sizeof(COLORS) / sizeof(int);
 const char *HELPS[] = {
 	"       HELP     ",
 	"----------------",
+	"Start: [",
+	"Pause: ]",
 	"Trans: 8 w W i I",
 	" Left: 4 a A j J",
 	"Right: 6 d D l L",
 	" Down: 5 s S k K",
-	" Fall: 0 Space"
+	" Fall: 0 Space",
+	" Quit: q Q"
 };
 const int HELPLEN = sizeof(HELPS) / sizeof(HELPS[0]);
 
@@ -197,25 +207,25 @@ static bool squareRecords[HEIGHT_SHAPE_NUM][WIDTH_SHAPE_NUM];
 static int colorRecords[HEIGHT_SHAPE_NUM][WIDTH_SHAPE_NUM];
 static int curShape, nextShape;
 static int curColor, nextColor;
-static int overColor;
-static bool endGame;
+static bool beginGame, endGame, pauseGame;
 static int maxGrade = MAX_GRADE;
 static int idxGrade = 0;
 
 void game_alrm(void) {
 	if(++idxGrade >= maxGrade) {
 		idxGrade = 0;
-		PROF(game_render);
+		if(pauseGame || endGame) PROF(game_render);
+		else PROF(game_key_down);
 	}
 	fb_sync();
 }
 
 int game_rand_color() {
 	int r, g, b;
-    r = rand() % COLOR_NUM;
-    g = rand() % COLOR_NUM;
-    b = rand() % COLOR_NUM;
-    return (COLORS[r] << 16) | (COLORS[g] << 8) | COLORS[b] | 0xff000000;
+	r = rand() % COLOR_NUM;
+	g = rand() % COLOR_NUM;
+	b = rand() % COLOR_NUM;
+	return (COLORS[r] << 16) | (COLORS[g] << 8) | COLORS[b] | 0xff000000;
 }
 
 void game_reset(void) {
@@ -223,26 +233,44 @@ void game_reset(void) {
 
 	srand(time(NULL));
 	
-	endGame = false;
-    sX = sY = 0;
-    curShape = 0;
-    curColor = 0;
-    nextShape = SHAPES[rand() % SHAPE_NUM];
-    nextColor = game_rand_color();
-    scoreNum = lineNum = 0;
-    for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
-        for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
-            squareRecords[y][x] = false;
-            colorRecords[y][x] = 0;
-        }
-    }
+	beginGame = endGame = pauseGame = false;
+	maxGrade = MAX_GRADE;
+	idxGrade = 0;
+	sX = sY = 0;
+	curShape = 0;
+	curColor = 0;
+	nextShape = SHAPES[rand() % SHAPE_NUM];
+	nextColor = game_rand_color();
+	scoreNum = lineNum = 0;
+	for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
+		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
+			squareRecords[y][x] = false;
+			colorRecords[y][x] = 0;
+		}
+	}
 }
 
 void game_init(void) {
 	game_reset();
-
 	game_render();
 	fb_sync();
+}
+
+void game_next_shape(void);
+void game_start(void) {
+	game_reset();
+	beginGame = true;
+	game_next_shape();
+	game_render();
+}
+
+void game_pause(void) {
+	pauseGame = !pauseGame;
+	idxGrade = 0;
+	game_render();
+	fb_sync();
+
+	game_timer();
 }
 
 void game_draw(int x, int y, int side, int color) {
@@ -254,7 +282,7 @@ void game_draw(int x, int y, int side, int color) {
 }
 
 bool game_shape_point(int p, int x, int y) {
-    return (p & (1 << (16 - (x + 1 + y * 4))));
+	return (p & (1 << (16 - (x + 1 + y * 4))));
 }
 
 static bool is_help = true;
@@ -277,9 +305,9 @@ void game_render(void) {
 		}
 	}
 
-	// draw next box
 	for(y = 0; y < 4; y ++) {
 		for(x = 0; x < 4; x ++) {
+			// draw next shape
 			x2 = X + (WIDTH_SHAPE_NUM + 1) * side + x * side;
 			y2 = Y + y * side;
 			if(game_shape_point(nextShape, x, y)) {
@@ -287,32 +315,38 @@ void game_render(void) {
 			} else {
 				fb_fill_rect(x2, y2, side, side, 0xffffffff);
 			}
+			
+			// draw current shape
+			if(x + sX >= 0 && y + sY >= 0 && x + sX < WIDTH_SHAPE_NUM && y + sY < HEIGHT_SHAPE_NUM && game_shape_point(curShape, x, y)) {
+				x2 = X + (sX + x) * side;
+				y2 = Y + (sY + y) * side;
+				game_draw(x2, y2, side, curColor);
+			}
 		}
 	}
 	
 	// draw scores and lines
 	{
-		int x, y;
 		char str[20];
 		x = X + (WIDTH_SHAPE_NUM + 1) * side;
 		y = Y + 4.5f * side;
 
 		sprintf(str, "%d", scoreNum);
 		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
-		fb_text(x, y, "SCORE:", 0xffffffff, 1);
-		fb_text(x + fb_font_width() * 7, y, str, 0xffff0000, 1);
+		fb_text(x, y, "SCORE:", 0xffffffff, 1, 1);
+		fb_text(x + fb_font_width() * 7, y, str, 0xffff0000, 1, 1);
 
 		y += fb_font_height() * 1.2f;
 
-		sprintf(str, "%d", scoreNum);
+		sprintf(str, "%d", lineNum);
 		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
-		fb_text(x, y, " LINE:", 0xffffffff, 1);
-		fb_text(x + fb_font_width() * 7, y, str, 0xffff3300, 1);
+		fb_text(x, y, " LINE:", 0xffffffff, 1, 1);
+		fb_text(x + fb_font_width() * 7, y, str, 0xffff3300, 1, 1);
 	}
 	
 	// draw help
 	if(is_help) {
-		int x, y, i;
+		int i;
 		int fh = fb_font_height() * 1.2f;
 
 		is_help = false;
@@ -320,17 +354,16 @@ void game_render(void) {
 		x = X + (WIDTH_SHAPE_NUM + 1) * side;
 		y = Y + (HEIGHT_SHAPE_NUM * side - HELPLEN * fh) / 2;
 
-		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], 0xff666666, 0);
+		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], 0xff666666, 0, 1);
 	}
 	
 	// draw lines
 	{
-		int x, y;
 		char str[10];
 		x = X + (WIDTH_SHAPE_NUM + 1) * side + (4 * side - fb_font_width() * 8) / 2;
 		y = Y + (HEIGHT_SHAPE_NUM - 4) * side - fb_font_height() - 5;
 		fb_fill_rect(x, y, fb_font_width() * 8, fb_font_height(), 0);
-		fb_text(x, y, str, 0xffffffff, 1);
+		fb_text(x, y, str, 0xffffffff, 1, 1);
 	}
 	
 	// draw time
@@ -345,13 +378,12 @@ void game_render(void) {
 		localtime_r(&t, &tm);
 		
 		{
-			int x, y;
 			char str[10];
 			sprintf(str, "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 			x = X + (WIDTH_SHAPE_NUM + 1) * side + (4 * side - fb_font_width() * 8) / 2;
 			y = Y + (HEIGHT_SHAPE_NUM - 4) * side - fb_font_height() - 5;
 			fb_fill_rect(x, y, fb_font_width() * 8, fb_font_height(), 0);
-			fb_text(x, y, str, 0xffffffff, 1);
+			fb_text(x, y, str, 0xffffffff, 1, 1);
 		}
 		
 		// background and border
@@ -396,26 +428,190 @@ void game_render(void) {
 			fb_draw_line(x0, y0, x, y, 0xffff0000, 1);
 		}
 	}
+	
+	if(beginGame && (endGame || pauseGame)) {
+		const char *str = endGame ? "GAME OVER" : "GAME PAUSE";
+		const int sz = 3;
+		const int fw = fb_font_width() * sz, fh = fb_font_height() * sz;
+		const int color = game_rand_color();
+		x = X + (WIDTH_SHAPE_NUM * side - fw * strlen(str)) / 2;
+		y = Y + (HEIGHT_SHAPE_NUM * side - fh) / 2;
+		fb_text(x - 1, y - 1, str, color + 0x333333, 1, sz);
+		fb_text(x + 1, y + 1, str, color - 0x333333, 1, sz);
+		fb_text(x, y, str, color, 1, sz);
+	}
+}
+
+int game_rotate_shape(int shape){
+	int s = 0, x, y;
+	for(y = 0; y < 4; y ++)
+		for(x = 0; x < 4; x ++)
+			if(game_shape_point(shape, 4 - y - 1, x))
+				s |= (1 << (16 - (x + 1 + y * 4)));
+	return s;
+}
+
+bool game_movable_shape(int shape, int X, int Y) {
+	int x, y;
+	for(y = 0; y < 4; y ++)
+		for(x = 0; x < 4; x ++)
+			if(game_shape_point(shape, x, y) && (X + x < 0 || X + x >= WIDTH_SHAPE_NUM || Y + y >= HEIGHT_SHAPE_NUM || (Y + y >= 0 && squareRecords[Y + y][X + x])))
+				return false;
+	return true;
+}
+
+void game_save_shape(void) {
+	int x, y, size = 0;
+	bool flag;
+	int idx = -1;
+	int stack[4];
+
+	for(y = 0; y < 4; y ++) {
+		if(sY + y < 0) continue;
+
+		for(x = 0; x < 4; x ++){
+			if(game_shape_point(curShape, x, y)){
+				squareRecords[sY + y][sX + x] = true;
+				colorRecords[sY + y][sX + x] = curColor;
+			}
+		}
+
+		flag = true;
+		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
+			if(!squareRecords[sY + y][x]){
+				flag = false;
+				break;
+			}
+		}
+		if(flag) {
+			stack[++idx] = sY + y;
+		}
+	}
+	if(idx >= 0) {
+		scoreNum += (idx + 1) * 2 - 1;
+		lineNum += idx + 1;
+
+		dprintf("stack:");
+		for(y = 0; y <= idx; y ++)
+			dprintf(" %d", stack[y]);
+		dprintf("\n");
+
+		y = stack[idx --];
+		size = 1;
+		do {
+			while(idx >= 0 && y - size == stack[idx]) {
+				size++;
+				idx --;
+			}
+			for(x = 0; x < WIDTH_SHAPE_NUM; x ++){
+				squareRecords[y][x] = squareRecords[y - size][x];
+				colorRecords[y][x] = colorRecords[y - size][x];
+			}
+			y --;
+		} while(y - size >= 0);
+		for(; y >= 0; y--) {
+			for(x = 0; x < WIDTH_SHAPE_NUM; x++) {
+				squareRecords[y][x] = false;
+			}
+		}
+	}
+}
+
+void game_next_shape(void) {
+	if(endGame) return;
+	if(sY < 0) goto end;
+
+	{
+		int x, y, mY = 0;
+		for(y = 3; y >= 0; y--) {
+			for(x = 0; x < 4; x++) {
+				if(game_shape_point(nextShape, x, y)) {
+					mY = max(mY, y);
+					break;
+				}
+			}
+		}
+		sX = (WIDTH_SHAPE_NUM - 4) / 2;
+		sY = -mY - 1;
+	}
+
+	if(!game_movable_shape(nextShape, sX, sY + 1)) {
+	end:
+		curShape = 0;
+		pauseGame = false;
+		endGame = true;
+		return;
+	}
+	curShape = nextShape;
+	nextShape = SHAPES[rand() % SHAPE_NUM];
+	curColor = nextColor;
+	nextColor = game_rand_color();
+	{
+		maxGrade = MAX_GRADE - scoreNum / MAX_GRADE;
+		idxGrade = 0;
+		if(maxGrade < 1) maxGrade = 1;
+		game_timer();
+	}
 }
 
 // transshape
 void game_key_trans(void) {
+	int shape;
+
+	if(!beginGame || pauseGame || endGame) return;
+
+	shape = game_rotate_shape(curShape);
+	if(game_movable_shape(shape, sX, sY)) {
+		curShape = shape;
+		game_render();
+	}
 }
 
 // left move
 void game_key_left(void) {
+	if(pauseGame || endGame) return;
+
+	if(game_movable_shape(curShape, sX - 1, sY)) {
+		sX --;
+		game_render();
+	}
 }
 
 // right move
 void game_key_right(void) {
+	if(pauseGame || endGame) return;
+
+	if(game_movable_shape(curShape, sX + 1, sY)) {
+		sX ++;
+		game_render();
+	}
 }
 
 // down move
 void game_key_down(void) {
+	if(pauseGame || endGame) return;
+
+	if(game_movable_shape(curShape, sX, sY + 1)) {
+		sY ++;
+	} else {
+		game_save_shape();
+		game_next_shape();
+	}
+
+	game_render();
 }
 
 // fall
 void game_key_fall(void) {
+	if(pauseGame || endGame) return;
+
+	while(game_movable_shape(curShape, sX, sY + 1))
+		sY++;
+
+	game_save_shape();
+	game_next_shape();
+
+	game_render();
 }
 
 

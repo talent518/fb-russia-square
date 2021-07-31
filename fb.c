@@ -23,7 +23,7 @@
 
 #define FB_ASSERT assert(fb_fd > 0 && fb_addr && fb_newbuf)
 
-int fb_debug = 0, fb_width = 0, fb_height = 0, fb_bpp = 0;
+int fb_width = 0, fb_height = 0, fb_bpp = 0;
 
 static int fb_fd = 0;
 static char *fb_addr = NULL;
@@ -39,12 +39,12 @@ int fb_init(const char *path) {
 	
 	fb_fd = open(path, O_RDWR);
 	if(fb_fd < 0) {
-		perror("open framebuffer device failed");
+		pprintf("open framebuffer device failed");
 		return FB_ERR;
 	}
 
 	if(ioctl(fb_fd, FBIOGET_VSCREENINFO, &vinfo)) {
-		perror("ioctl FBIOGET_VSCREENINFO failed");
+		pprintf("ioctl FBIOGET_VSCREENINFO failed");
 		close(fb_fd);
 		return FB_ERR;
 	}
@@ -57,7 +57,7 @@ int fb_init(const char *path) {
 
 	fb_newbuf = (char*) malloc(fb_xsize * fb_height);
 	if(fb_newbuf == NULL) {
-		perror("malloc fb_newbuf failed");
+		pprintf("malloc fb_newbuf failed");
 		close(fb_fd);
 		return FB_ERR;
 	}
@@ -66,12 +66,12 @@ int fb_init(const char *path) {
 	fb_size = vinfo.xres_virtual * vinfo.yres_virtual * fb_bpp / 8;
 	fb_addr = (char*) mmap(0, fb_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
 	if(fb_addr == MAP_FAILED) {
-		perror("mmap failed");
+		pprintf("mmap failed");
 		close(fb_fd);
 		return FB_ERR;
 	}
 
-	if(fb_debug) fprintf(stderr, "size: %dx%d, bpp: %d, mmap: %p\n", fb_width, fb_height, fb_bpp, fb_addr);
+	eprintf("size: %dx%d, bpp: %d, mmap: %p\n", fb_width, fb_height, fb_bpp, fb_addr);
 	
 	init_font();
 
@@ -185,13 +185,18 @@ static bool outside(int x, int y) {
     return x < 0 || x >= fb_width || y < 0 || y >= fb_height;
 }
 
-static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* dst_p, int dst_row_bytes, int width, int height, int color) {
+static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* dst_p, int dst_row_bytes, int width, int height, int color, int size) {
     int i, j;
-    for (j = 0; j < height; ++j) {
+    int cx = size, cy = size;
+    for (j = 0; j < height * size; ++j) {
         unsigned char* sx = src_p;
         unsigned char* px = dst_p;
-        for (i = 0; i < width; ++i) {
-            unsigned char a = *sx++;
+        for (i = 0; i < width * size; ++i) {
+            unsigned char a = *sx;
+            if(--cx <= 0) {
+            	cx = size;
+            	sx ++;
+            }
             if (a == 255) {
             	memcpy(px, &color, fb_bpp / 8);
             } else if (a > 0) {
@@ -200,7 +205,10 @@ static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* d
             }
 			px += fb_bpp / 8;
         }
-        src_p += src_row_bytes;
+        if(--cy <= 0) {
+        	cy = size;
+        	src_p += src_row_bytes;
+    	}
         dst_p += dst_row_bytes;
     }
 }
@@ -213,21 +221,21 @@ int fb_font_height() {
 	return font.cheight;
 }
 
-void fb_text(int x, int y, const char *s, int color, int bold) {
+void fb_text(int x, int y, const char *s, int color, int bold, int size) {
     unsigned off;
     
     bold = bold && (font.height != font.cheight);
 
     while((off = *s++)) {
         off -= 32;
-        if (outside(x, y) || outside(x + font.cwidth - 1, y + font.cheight - 1)) break;
+        if (outside(x, y) || outside(x + font.cwidth * size - 1, y + font.cheight - 1)) break;
         if (off < 96) {
             unsigned char* src_p = font_data + (off * font.cwidth) + (bold ? font.cheight * font.width : 0);
             unsigned char* dst_p = (unsigned char*) fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
 
-            text_blend(src_p, font.width, dst_p, fb_xsize, font.cwidth, font.cheight, color);
+            text_blend(src_p, font.width, dst_p, fb_xsize, font.cwidth, font.cheight, color, size);
         }
-        x += font.cwidth;
+        x += font.cwidth * size;
     }
 }
 
