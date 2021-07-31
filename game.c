@@ -86,9 +86,7 @@ int main(int argc, char *argv[]) {
 		ret = select(1, &set, NULL, NULL, &tv);
 		if(ret > 0) {
 			game_key(getchar());
-		} else if(ret == 0) {
-			game_render();
-		} else if(errno != EINTR) {
+		} else if(ret != 0 && errno != EINTR) {
 			pprintf("select stdin error");
 			is_running = 0;
 		}
@@ -274,10 +272,17 @@ void game_pause(void) {
 }
 
 void game_draw(int x, int y, int side, int color) {
+#if 0
 	fb_draw_line(x, y, x + side - 1, y, color + 0x333333, 1);
 	fb_draw_line(x, y, x, y + side - 1, color + 0x333333, 1);
 	fb_draw_line(x + side - 1, y, x + side - 1, y + side - 1, color - 0x333333, 1);
 	fb_draw_line(x, y + side - 1, x + side - 1, y + side - 1, color - 0x333333, 1);
+#else
+	fb_fill_rect(x, y, 1, side, color + 0x333333);
+	fb_fill_rect(x, y, side, 1, color + 0x333333);
+	fb_fill_rect(x + side - 1, y, 1, side, color - 0x333333);
+	fb_fill_rect(x, y + side - 1, side, 1, color - 0x333333);
+#endif
 	fb_fill_rect(x + 1, y + 1, side - 2, side - 2, color);
 }
 
@@ -292,14 +297,15 @@ void game_render(void) {
 	int x, y;
 	int x2, y2;
 
-	// draw main box
 	for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
 		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
 			x2 = X + x * side;
 			y2 = Y + y * side;
-			if(squareRecords[y][x]) {
+			if(squareRecords[y][x]) { // draw main box
 				game_draw(x2, y2, side, colorRecords[y][x]);
-			} else {
+			} else if(x >= sX && x <= sX + 3 && y >= sY && y <= sY + 3 && game_shape_point(curShape, x - sX, y - sY)) { // draw current shape
+				game_draw(x2, y2, side, curColor);
+			} else { // draw main box
 				fb_fill_rect(x2, y2, side, side, 0xffffffff);
 			}
 		}
@@ -314,13 +320,6 @@ void game_render(void) {
 				game_draw(x2, y2, side, nextColor);
 			} else {
 				fb_fill_rect(x2, y2, side, side, 0xffffffff);
-			}
-			
-			// draw current shape
-			if(x + sX >= 0 && y + sY >= 0 && x + sX < WIDTH_SHAPE_NUM && y + sY < HEIGHT_SHAPE_NUM && game_shape_point(curShape, x, y)) {
-				x2 = X + (sX + x) * side;
-				y2 = Y + (sY + y) * side;
-				game_draw(x2, y2, side, curColor);
 			}
 		}
 	}
@@ -564,6 +563,7 @@ void game_key_trans(void) {
 	if(game_movable_shape(shape, sX, sY)) {
 		curShape = shape;
 		game_render();
+		fb_sync();
 	}
 }
 
@@ -574,6 +574,7 @@ void game_key_left(void) {
 	if(game_movable_shape(curShape, sX - 1, sY)) {
 		sX --;
 		game_render();
+		fb_sync();
 	}
 }
 
@@ -584,6 +585,7 @@ void game_key_right(void) {
 	if(game_movable_shape(curShape, sX + 1, sY)) {
 		sX ++;
 		game_render();
+		fb_sync();
 	}
 }
 
@@ -599,6 +601,7 @@ void game_key_down(void) {
 	}
 
 	game_render();
+	fb_sync();
 }
 
 // fall
@@ -612,6 +615,7 @@ void game_key_fall(void) {
 	game_next_shape();
 
 	game_render();
+	fb_sync();
 }
 
 

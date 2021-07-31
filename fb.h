@@ -55,7 +55,7 @@ static inline double microtime() {
 		double __t = microtime(); \
 		f(args); \
 		printf(#f ": %lf\n", microtime() - __t); \
-	} while(0);
+	} while(0)
 #endif
 
 #ifdef DEBUG
