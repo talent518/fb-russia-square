@@ -34,6 +34,7 @@ static char *fb_oldbuf = NULL, *fb_newbuf = NULL;
 static void init_font(void);
 int fb_init(const char *path) {
 	struct fb_var_screeninfo vinfo;
+	size_t sz;
 
 	assert(fb_fd == 0 && fb_addr == NULL);
 	
@@ -55,13 +56,15 @@ int fb_init(const char *path) {
 	fb_height = vinfo.yres;
 	fb_bpp = vinfo.bits_per_pixel;
 
-	fb_newbuf = (char*) malloc(fb_xsize * fb_height);
+	sz = fb_xsize * fb_height;
+	fb_newbuf = (char*) malloc(sz);
 	if(fb_newbuf == NULL) {
 		pprintf("malloc fb_newbuf failed");
 		close(fb_fd);
 		return FB_ERR;
 	}
-	memset(fb_newbuf, 0, fb_xsize * fb_height);
+	memset(fb_newbuf, 0, sz);
+	dprintf("newbuf size is %.3lfMB\n", sz / 1024.0f / 1024.0f);
 
 	fb_size = vinfo.xres_virtual * vinfo.yres_virtual * fb_bpp / 8;
 	fb_addr = (char*) mmap(0, fb_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
@@ -114,13 +117,17 @@ void fb_sync(void) {
 int fb_save(void) {
 	char *p, *p2;
 	int i;
+	size_t sz;
 
 	FB_ASSERT;
 
 	if(fb_oldbuf) free(fb_oldbuf);
 
-	fb_oldbuf = (char*) malloc(fb_xsize * fb_height);
+	sz = fb_xsize * fb_height;
+	fb_oldbuf = (char*) malloc(sz);
 	if(fb_oldbuf == NULL) return FB_ERR;
+
+	dprintf("oldbuf size is %.3lfMB\n", sz / 1024.0f / 1024.0f);
 
 	p = fb_oldbuf;
 	p2 = fb_addr;
@@ -161,11 +168,16 @@ static unsigned char *font_data = NULL;
 
 static void init_font(void) {
 	unsigned char* bits;
+	size_t sz;
+
 	if(font_data) return;
 
-	bits = malloc(font.width * font.height);
+	sz = font.width * font.height;
+	bits = malloc(sz);
 	font_data = bits;
-	
+
+	dprintf("font_data size is %.3lfKB\n", sz / 1024.0f);
+
 	unsigned char data;
     unsigned char* in = font.rundata;
     while((data = *in++)) {
