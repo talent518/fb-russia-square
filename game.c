@@ -218,8 +218,8 @@ const int HELPLEN = sizeof(HELPS) / sizeof(HELPS[0]);
 static int sX, sY, scoreNum, lineNum;
 static bool squareRecords[HEIGHT_SHAPE_NUM][WIDTH_SHAPE_NUM];
 static int colorRecords[HEIGHT_SHAPE_NUM][WIDTH_SHAPE_NUM];
-static int curShape, nextShape;
-static int curColor, nextColor;
+static int curShape, nextShape = 0;
+static int curColor, nextColor = 0;
 static bool beginGame, endGame, pauseGame;
 static int maxGrade = MAX_GRADE;
 static int idxGrade = 0;
@@ -258,8 +258,8 @@ void game_reset(void) {
 	sX = sY = 0;
 	curShape = 0;
 	curColor = 0;
-	nextShape = SHAPES[rand() % SHAPE_NUM];
-	nextColor = game_rand_color();
+	if(nextShape == 0) nextShape = SHAPES[rand() % SHAPE_NUM];
+	if(nextColor == 0) nextColor = game_rand_color();
 	scoreNum = lineNum = 0;
 	for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
 		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
@@ -280,7 +280,7 @@ void game_init(void) {
 
 void game_next_shape(void);
 void game_start(void) {
-	game_reset();
+	if(beginGame) game_reset();
 	beginGame = true;
 	game_next_shape();
 	game_render();
