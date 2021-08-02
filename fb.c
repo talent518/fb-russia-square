@@ -30,10 +30,10 @@ static char *fb_addr = NULL;
 static int fb_size = 0;
 static int fb_xoffset = 0, fb_xsize = 0;
 static char *fb_oldbuf = NULL, *fb_newbuf = NULL;
+struct fb_var_screeninfo fb_vinfo;
 
 static void init_font(void);
 int fb_init(const char *path) {
-	struct fb_var_screeninfo vinfo;
 	size_t sz;
 
 	assert(fb_fd == 0 && fb_addr == NULL);
@@ -44,17 +44,17 @@ int fb_init(const char *path) {
 		return FB_ERR;
 	}
 
-	if(ioctl(fb_fd, FBIOGET_VSCREENINFO, &vinfo)) {
+	if(ioctl(fb_fd, FBIOGET_VSCREENINFO, &fb_vinfo)) {
 		pprintf("ioctl FBIOGET_VSCREENINFO failed");
 		close(fb_fd);
 		return FB_ERR;
 	}
 
-	fb_width = vinfo.xres;
-	fb_xoffset = vinfo.xres_virtual * vinfo.bits_per_pixel / 8;
-	fb_xsize = vinfo.xres * vinfo.bits_per_pixel / 8;
-	fb_height = vinfo.yres;
-	fb_bpp = vinfo.bits_per_pixel;
+	fb_width = fb_vinfo.xres;
+	fb_xoffset = fb_vinfo.xres_virtual * fb_vinfo.bits_per_pixel / 8;
+	fb_xsize = fb_vinfo.xres * fb_vinfo.bits_per_pixel / 8;
+	fb_height = fb_vinfo.yres;
+	fb_bpp = fb_vinfo.bits_per_pixel;
 
 	sz = fb_xsize * fb_height;
 	fb_newbuf = (char*) malloc(sz);
@@ -66,7 +66,7 @@ int fb_init(const char *path) {
 	memset(fb_newbuf, 0, sz);
 	dprintf("newbuf size is %.3lfMB\n", sz / 1024.0f / 1024.0f);
 
-	fb_size = vinfo.xres_virtual * vinfo.yres_virtual * fb_bpp / 8;
+	fb_size = fb_vinfo.xres_virtual * fb_vinfo.yres_virtual * fb_bpp / 8;
 	fb_addr = (char*) mmap(0, fb_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
 	if(fb_addr == MAP_FAILED) {
 		pprintf("mmap failed");
@@ -74,11 +74,40 @@ int fb_init(const char *path) {
 		return FB_ERR;
 	}
 
-	eprintf("size: %dx%d, bpp: %d, mmap: %p\n", fb_width, fb_height, fb_bpp, fb_addr);
-	
+#	define vcolor(x) fb_vinfo.x.offset, fb_vinfo.x.length, fb_vinfo.x.msb_right
+	eprintf("size: %dx%d, bpp: %d, mmap: %p, red(%u,%u,%u), green(%u,%u,%u), blue(%u,%u,%u), transp(%u,%u,%u)\n", fb_width, fb_height, fb_bpp, fb_addr, vcolor(red), vcolor(green), vcolor(blue), vcolor(transp));
+#	undef vcolor
+
 	init_font();
 
 	return FB_OK;
+}
+
+int fb_color(int red, int green, int blue) {
+	int mask = (1 << fb_vinfo.red.length) - 1;
+
+	red &= mask;
+	green &= mask;
+	blue &= mask;
+
+	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_bpp == 32 ? (0xff << fb_vinfo.transp.offset) : 0);
+}
+
+int fb_color_add(int color, int add) {
+	int mask = (1 << fb_vinfo.red.length) - 1;
+	int red, green, blue;
+
+	red = (color >> fb_vinfo.red.offset) & mask;
+	green = (color >> fb_vinfo.green.offset) & mask;
+	blue = (color >> fb_vinfo.blue.offset) & mask;
+
+	add &= mask;
+
+	red += add;
+	green += add;
+	blue += add;
+
+	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_bpp == 32 ? (0xff << fb_vinfo.transp.offset) : 0);
 }
 
 static void free_font(void);

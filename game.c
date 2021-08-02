@@ -233,7 +233,8 @@ void game_alrm(void) {
 	} else {
 		if(++idxGrade >= maxGrade) {
 			idxGrade = 0;
-			PROF(game_key_down);
+			if(!beginGame || pauseGame || endGame) PROF(game_render);
+			else PROF(game_key_down);
 		}
 	}
 	fb_sync();
@@ -244,7 +245,7 @@ int game_rand_color() {
 	r = rand() % COLOR_NUM;
 	g = rand() % COLOR_NUM;
 	b = rand() % COLOR_NUM;
-	return (COLORS[r] << 16) | (COLORS[g] << 8) | COLORS[b] | 0xff000000;
+	return fb_color(COLORS[r], COLORS[g], COLORS[b]);
 }
 
 void game_reset(void) {
@@ -302,16 +303,18 @@ void game_pause(void) {
 }
 
 void game_draw(int x, int y, int side, int color) {
+	int addcolor = fb_color_add(color, 0x33);
+	int subcolor = fb_color_add(color, -0x33);
 #if 0
-	fb_draw_line(x, y, x + side - 1, y, color + 0x333333, 1);
-	fb_draw_line(x, y, x, y + side - 1, color + 0x333333, 1);
-	fb_draw_line(x + side - 1, y, x + side - 1, y + side - 1, color - 0x333333, 1);
-	fb_draw_line(x, y + side - 1, x + side - 1, y + side - 1, color - 0x333333, 1);
+	fb_draw_line(x, y, x + side - 1, y, addcolor, 1);
+	fb_draw_line(x, y, x, y + side - 1, addcolor, 1);
+	fb_draw_line(x + side - 1, y, x + side - 1, y + side - 1, subcolor, 1);
+	fb_draw_line(x, y + side - 1, x + side - 1, y + side - 1, subcolor, 1);
 #else
-	fb_fill_rect(x, y, 1, side, color + 0x333333);
-	fb_fill_rect(x, y, side, 1, color + 0x333333);
-	fb_fill_rect(x + side - 1, y, 1, side, color - 0x333333);
-	fb_fill_rect(x, y + side - 1, side, 1, color - 0x333333);
+	fb_fill_rect(x, y, 1, side, addcolor);
+	fb_fill_rect(x, y, side, 1, addcolor);
+	fb_fill_rect(x + side - 1, y, 1, side, subcolor);
+	fb_fill_rect(x, y + side - 1, side, 1, subcolor);
 #endif
 	fb_fill_rect(x + 1, y + 1, side - 2, side - 2, color);
 }
@@ -363,27 +366,28 @@ void game_render(void) {
 		sprintf(str, "%d", scoreNum);
 		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
 		fb_text(x, y, "SCORE:", 0xffffffff, 1, 1);
-		fb_text(x + fb_font_width() * 7, y, str, fb_bpp == 32 ? 0xff0000ff : 0xffff0000, 1, 1);
+		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x66, 0), 1, 1);
 
 		y += fb_font_height() * 1.2f;
 
 		sprintf(str, "%d", lineNum);
 		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
 		fb_text(x, y, " LINE:", 0xffffffff, 1, 1);
-		fb_text(x + fb_font_width() * 7, y, str, fb_bpp == 32 ? 0xff0033ff : 0xffff3300, 1, 1);
+		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x33, 0), 1, 1);
 	}
 	
 	// draw help
 	if(is_help) {
 		int i;
 		int fh = fb_font_height() * 1.2f;
+		int gray = fb_color(0x66, 0x66, 0x66);
 
 		is_help = false;
 
 		x = X + (WIDTH_SHAPE_NUM + 1) * side;
 		y = Y + (HEIGHT_SHAPE_NUM * side - HELPLEN * fh) / 2;
 
-		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], 0xff666666, 0, 1);
+		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], gray, 0, 1);
 	}
 	
 	// draw lines
@@ -438,7 +442,7 @@ void game_render(void) {
 			angle = (90.0f - tm.tm_hour * 30.0f - tm.tm_min * 0.5f - tm.tm_sec / 120.0f) * M_PI / 180.0f;
 			x = radius * 0.35f * cos(angle) + x0;
 			y = -radius * 0.35f * sin(angle) + y0;
-			fb_draw_line(x0, y0, x, y, fb_bpp == 32 ? 0xffff0000 : 0xff0000ff, 5);
+			fb_draw_line(x0, y0, x, y, fb_color(0, 0, 0xff), 5);
 		}
 
 		// minute
@@ -446,7 +450,7 @@ void game_render(void) {
 			angle = (90.0f - tm.tm_min * 6.0f - tm.tm_sec / 10.0f) * M_PI / 180.0f;
 			x = radius * 0.6f * cos(angle) + x0;
 			y = -radius * 0.55f * sin(angle) + y0;
-			fb_draw_line(x0, y0, x, y, 0xff00ff00, 3);
+			fb_draw_line(x0, y0, x, y, fb_color(0, 0xff, 0), 3);
 		}
 
 		// second
@@ -454,13 +458,13 @@ void game_render(void) {
 			angle = (90.0f - tm.tm_sec * 6) * M_PI / 180.0f;
 			x = radius * 0.75f * cos(angle) + x0;
 			y = -radius * 0.75f * sin(angle) + y0;
-			fb_draw_line(x0, y0, x, y, fb_bpp == 32 ? 0xff0000ff : 0xffff0000, 1);
+			fb_draw_line(x0, y0, x, y, fb_color(0xff, 0, 0), 1);
 		}
 	}
 	
 	if(beginGame && (endGame || pauseGame)) {
 		const char *str = endGame ? "GAME OVER" : "GAME PAUSE";
-		const int sz = 3;
+		const int sz = (WIDTH_SHAPE_NUM * side) / (fb_font_width() * strlen(str));
 		const int offset = (HEIGHT_SHAPE_NUM * side - fb_font_height() * sz) / 2;
 		const int step = offset / 1.5f / MAX_GRADE;
 
@@ -468,8 +472,8 @@ void game_render(void) {
 
 		x = X + (WIDTH_SHAPE_NUM * side - fb_font_width() * sz * strlen(str)) / 2;
 		y = Y + offset + overOffset;
-		fb_text(x - 1, y - 1, str, overColor + 0x333333, 1, sz);
-		fb_text(x + 1, y + 1, str, overColor - 0x333333, 1, sz);
+		fb_text(x - 1, y - 1, str, fb_color_add(overColor, 0x33), 1, sz);
+		fb_text(x + 1, y + 1, str, fb_color_add(overColor, -0x33), 1, sz);
 		fb_text(x, y, str, overColor, 1, sz);
 		
 		overOffset += step * overStep;

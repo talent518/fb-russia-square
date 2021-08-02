@@ -21,5 +21,5 @@ fb.o game.o test.o: fb.h
 
 clean:
 	@echo $@
-	@rm -vf *.o fbrussia
+	@rm -vf *.o fbrussia fbtest
 
