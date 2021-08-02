@@ -90,7 +90,7 @@ int fb_color(int red, int green, int blue) {
 	green &= mask;
 	blue &= mask;
 
-	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_bpp == 32 ? (0xff << fb_vinfo.transp.offset) : 0);
+	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_vinfo.transp.length ? (0xff << fb_vinfo.transp.offset) : 0);
 }
 
 int fb_color_add(int color, int add) {
@@ -107,7 +107,7 @@ int fb_color_add(int color, int add) {
 	green += add;
 	blue += add;
 
-	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_bpp == 32 ? (0xff << fb_vinfo.transp.offset) : 0);
+	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_vinfo.transp.length ? (0xff << fb_vinfo.transp.offset) : 0);
 }
 
 static void free_font(void);
