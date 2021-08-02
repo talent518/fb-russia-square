@@ -30,7 +30,7 @@ static char *fb_addr = NULL;
 static int fb_size = 0;
 static int fb_xoffset = 0, fb_xsize = 0;
 static char *fb_oldbuf = NULL, *fb_newbuf = NULL;
-struct fb_var_screeninfo fb_vinfo;
+static struct fb_var_screeninfo fb_vinfo;
 
 static void init_font(void);
 int fb_init(const char *path) {
@@ -94,18 +94,18 @@ int fb_color(int red, int green, int blue) {
 }
 
 int fb_color_add(int color, int add) {
-	int mask = (1 << fb_vinfo.red.length) - 1;
+	int rmask = (1 << fb_vinfo.red.length) - 1;
+	int gmask = (1 << fb_vinfo.green.length) - 1;
+	int bmask = (1 << fb_vinfo.blue.length) - 1;
 	int red, green, blue;
 
-	red = (color >> fb_vinfo.red.offset) & mask;
-	green = (color >> fb_vinfo.green.offset) & mask;
-	blue = (color >> fb_vinfo.blue.offset) & mask;
+	red = (color >> fb_vinfo.red.offset) & rmask;
+	green = (color >> fb_vinfo.green.offset) & gmask;
+	blue = (color >> fb_vinfo.blue.offset) & bmask;
 
-	add &= mask;
-
-	red += add;
-	green += add;
-	blue += add;
+	red += (add & rmask);
+	green += (add & gmask);
+	blue += (add & bmask);
 
 	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_vinfo.transp.length ? (0xff << fb_vinfo.transp.offset) : 0);
 }
