@@ -133,9 +133,9 @@ int main(int argc, char *argv[]) {
 			// dprintf("%d: %lf\n", i, angle);
 			rad = angle * M_PI / 180.0f;
 			r = 5.0f * rad;
-			x = x0 + round(r * cos(rad));
-			y = y0 - round(r * sin(rad));
-			if(x >= 0 && x < fb_width && y >= 0 && y < fb_height) fb_draw_point(x, y, color);
+			x = x0 + r * cos(rad);
+			y = y0 - r * sin(rad);
+			if(x >= 0 && x < fb_width && y >= 0 && y < fb_height) fb_draw_point(round(x), round(y), color);
 			rad = 360.0f / (2 * M_PI * r);
 			if(rad > 10.0f) angle += 10.0f;
 			else angle += rad;
