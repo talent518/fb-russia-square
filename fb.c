@@ -476,3 +476,8 @@ void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight) {
 	}
 }
 
+void fb_draw_point(int x, int y, unsigned int color) {
+	FB_ASSERT_POINT(x, y);
+
+	memcpy(fb_newbuf + y * fb_xsize + x * fb_bpp / 8, &color, fb_bpp / 8);
+}

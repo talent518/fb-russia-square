@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 	if(fb_save() == FB_ERR) fprintf(stderr, "save failed\n");
 
 	{
-		double t;
+		BEGIN_TIME();
 
 		fb_fill_rect(0, 0, fb_width, fb_height, 0xffffffff); // background
 
@@ -71,7 +71,8 @@ int main(int argc, char *argv[]) {
 		fb_fill_oval((FB_W - 100) / 2, (FB_H - 100) / 2, 100, 100, 0xff00ffff); // fill oval in center
 		fb_draw_oval((FB_W - 150) / 2, (FB_H - 150) / 2, 150, 150, 0xff00ffff, 2); // draw oval in center
 
-		t = microtime();
+		END_TIME();
+		BEGIN_TIME();
 
 		fb_draw_line(0, 0, 100, 100, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 100, 200, 0xff0000ff, 2);
@@ -79,8 +80,8 @@ int main(int argc, char *argv[]) {
 		fb_draw_line(0, 0, 200, 100, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 300, 100, 0xff0000ff, 2);
 
-		printf("line %d: %lf\n", __LINE__, microtime() - t);
-		t = microtime();
+		END_TIME();
+		BEGIN_TIME();
 
 		fb_draw_line(0, FB_H / 2, FB_W - 1, FB_H / 2, 0xff0000ff, 2);
 		fb_draw_line(FB_W / 2, 0, FB_W / 2, FB_H - 1, 0xff0000ff, 2);
@@ -88,7 +89,8 @@ int main(int argc, char *argv[]) {
 		fb_draw_line(0, FB_H / 2 + 2, FB_W - 1, FB_H / 2 + 2, 0xff00ff00, 2);
 		fb_draw_line(FB_W / 2 + 2, 0, FB_W / 2 + 2, FB_H - 1, 0xff00ff00, 2);
 		
-		printf("line %d: %lf\n", __LINE__, microtime() - t);
+		END_TIME();
+		BEGIN_TIME();
 		
 		{
 			int x = (FB_W / 2), y = (FB_H / 2);
@@ -107,10 +109,40 @@ int main(int argc, char *argv[]) {
 				y1 = y2;
 			}
 		}
-		
+
+		END_TIME();
+		BEGIN_TIME();
+
 		fb_text(100, 75, "Hello World!", 0xff000000, 0, 1);
 		fb_text(100, 100, "Hello World!", 0xff000000, 1, 2);
+
+		END_TIME();
 	}
+
+	BEGIN_TIME();
+	{ // Archimedean spiral
+		int x, y;
+		int x0 = FB_W / 2, y0 = FB_H / 2;
+		int color = fb_color(0xff, 0, 0xff);
+		int i = 0;
+		double r = 1.0f, rad;
+		double angle = 1.0f;
+		double R = sqrt(pow(x0, 2) + pow(y0, 2));
+		do {
+			i++;
+			// dprintf("%d: %lf\n", i, angle);
+			rad = angle * M_PI / 180.0f;
+			r = 5.0f * rad;
+			x = x0 + round(r * cos(rad));
+			y = y0 - round(r * sin(rad));
+			if(x >= 0 && x < fb_width && y >= 0 && y < fb_height) fb_draw_point(x, y, color);
+			rad = 360.0f / (2 * M_PI * r);
+			if(rad > 10.0f) angle += 10.0f;
+			else angle += rad;
+		} while(r < R);
+		dprintf("points: %d\n", i);
+	}
+	END_TIME();
 
 	fprintf(stdout, "\033[?25l"); // hide cursor
 	fflush(stdout);

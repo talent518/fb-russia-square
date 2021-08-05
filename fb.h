@@ -41,6 +41,8 @@ void fb_draw_round_rect(int x, int y, int width, int height, unsigned int color,
 void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int weight);
 void fb_draw_circle(int x, int y, int radius, unsigned int color, int weight);
 
+void fb_draw_point(int x, int y, unsigned int color);
+
 static inline double microtime() {
 	struct timeval tp = {0};
 
@@ -51,14 +53,18 @@ static inline double microtime() {
 	return (double) tp.tv_sec + (double) tp.tv_usec / 1000000.0f;
 }
 
-#ifndef DPROF
+#ifndef DTIME
 #	define PROF(f,args...) f(args)
+#	define BEGIN_TIME()
+#	define END_TIME()
 #else
 #	define PROF(f,args...) do { \
 		double __t = microtime(); \
 		f(args); \
 		printf(#f ": %lf\n", microtime() - __t); \
 	} while(0)
+#	define BEGIN_TIME() do { double __t = microtime()
+#	define END_TIME() printf("[TIME] %s:%d %lf\n", __func__, __LINE__, microtime() - __t); } while(0)
 #endif
 
 #ifdef DEBUG
