@@ -15,7 +15,7 @@ fbtest: fb.o test.o
 
 fb.o game.o test.o: fb.h
 
-fb.o: font_8x15.h font_10x18.h font_12x22.h font_18x32.h
+fb.o: font_10x18.h font_12x22.h font_18x32.h
 
 %.o: %.c
 	@echo CC $@
