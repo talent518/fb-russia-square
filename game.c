@@ -202,14 +202,14 @@ static const int SHAPE_NUM = sizeof(SHAPES) / sizeof(int);
 static const int COLORS[] = {0x33, 0x66, 0x99, 0xcc};
 static const int COLOR_NUM = sizeof(COLORS) / sizeof(int);
 const char *HELPS[] = {
-	"       HELP     ",
-	"----------------",
+	"      HELP    ",
+	"--------------",
 	"Start: [",
 	"Pause: ]",
-	"Trans: 8 w W i I",
-	" Left: 4 a A j J",
-	"Right: 6 d D l L",
-	" Down: 5 s S k K",
+	"Trans: 8 w i",
+	" Left: 4 a j",
+	"Right: 6 d l",
+	" Down: 5 s k",
 	" Fall: 0 Space",
 	" Quit: q Q"
 };
@@ -356,6 +356,8 @@ void game_render(void) {
 			}
 		}
 	}
+
+	fb_set_font(FONT_12x22);
 	
 	// draw scores and lines
 	{
@@ -364,23 +366,25 @@ void game_render(void) {
 		y = Y + 4.5f * side;
 
 		sprintf(str, "%d", scoreNum);
-		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
-		fb_text(x, y, "SCORE:", 0xffffffff, 1, 1);
+		fb_fill_rect(x, y, fb_width - x, fb_font_height(), 0);
+		fb_text(x, y, "SCORE:", 0xffffffff, 0, 1);
 		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x66, 0), 1, 1);
 
 		y += fb_font_height() * 1.2f;
 
 		sprintf(str, "%d", lineNum);
-		fb_fill_rect(x, y, fb_font_width() * (strlen(str) + 7), fb_font_height(), 0);
-		fb_text(x, y, " LINE:", 0xffffffff, 1, 1);
+		fb_fill_rect(x, y, fb_width - x, fb_font_height(), 0);
+		fb_text(x, y, " LINE:", 0xffffffff, 0, 1);
 		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x33, 0), 1, 1);
 	}
+
+	fb_set_font(FONT_10x18);
 	
 	// draw help
 	if(is_help) {
 		int i;
-		int fh = fb_font_height() * 1.2f;
-		int gray = fb_color(0x66, 0x66, 0x66);
+		int fh = fb_font_height();
+		int gray = fb_color(0x99, 0x99, 0x99);
 
 		is_help = false;
 
@@ -389,6 +393,8 @@ void game_render(void) {
 
 		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], gray, 0, 1);
 	}
+
+	fb_set_font(FONT_10x18);
 	
 	// draw lines
 	{
@@ -415,7 +421,7 @@ void game_render(void) {
 			sprintf(str, "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 			x = X + (WIDTH_SHAPE_NUM + 1) * side + (4 * side - fb_font_width() * 8) / 2;
 			y = Y + (HEIGHT_SHAPE_NUM - 4) * side - fb_font_height() - 5;
-			fb_fill_rect(x, y, fb_font_width() * 8, fb_font_height(), 0);
+			fb_fill_rect(x, y, fb_width - x, fb_height - y, 0);
 			fb_text(x, y, str, 0xffffffff, 1, 1);
 		}
 		
@@ -462,8 +468,9 @@ void game_render(void) {
 		}
 	}
 	
+	fb_set_font(FONT_18x32);
 	if(beginGame && (endGame || pauseGame)) {
-		const char *str = endGame ? "GAME OVER" : "GAME PAUSE";
+		const char *str = endGame ? "OVER!" : "PAUSE";
 		const int sz = (WIDTH_SHAPE_NUM * side) / (fb_font_width() * strlen(str));
 		const int offset = (HEIGHT_SHAPE_NUM * side - fb_font_height() * sz) / 2;
 		const int step = offset / 1.5f / MAX_GRADE;

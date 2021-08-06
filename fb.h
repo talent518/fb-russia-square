@@ -24,6 +24,14 @@ void fb_sync(void);
 int fb_color(int red, int green, int blue);
 int fb_color_add(int color, int add);
 
+typedef enum {
+	FONT_10x18 = 1,
+	FONT_12x22,
+	FONT_18x32,
+} font_family_t;
+
+void fb_set_font(font_family_t family);
+
 int fb_font_width();
 int fb_font_height();
 

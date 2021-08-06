@@ -192,33 +192,76 @@ int fb_restore(void) {
 	return FB_OK;
 }
 
-#include "font_10x18.h"
-static unsigned char *font_data = NULL;
+typedef struct {
+	unsigned width;
+	unsigned height;
+	unsigned cwidth;
+	unsigned cheight;
+	unsigned char *pixdata;
+	unsigned char *rundata;
+} font_t;
 
-static void init_font(void) {
+static void font_rundata(font_t *font) {
+	unsigned char data;
+    unsigned char* in = font->pixdata;
+
 	unsigned char* bits;
-	size_t sz;
+	unsigned int sz;
 
-	if(font_data) return;
+	if(font->rundata) return;
 
-	sz = font.width * font.height;
-	bits = malloc(sz);
-	font_data = bits;
+	sz = font->width * font->height;
+	font->rundata = bits = malloc(sz);
 
 	dprintf("font_data size is %.3lfKB\n", sz / 1024.0f);
 
-	unsigned char data;
-    unsigned char* in = font.rundata;
     while((data = *in++)) {
-        memset(bits, (data & 0x80) ? 255 : 0, data & 0x7f);
-        bits += (data & 0x7f);
+    	sz = data & 0x7f;
+        memset(bits, (data & 0x80) ? 255 : 0, sz);
+        bits += sz;
     }
 }
 
+#include "font_10x18.h"
+#include "font_12x22.h"
+#include "font_18x32.h"
+static font_t *font = NULL;
+
+static void init_font(void) {
+	font_rundata(&font_10x18);
+	font_rundata(&font_12x22);
+	font_rundata(&font_18x32);
+	
+	font = &font_12x22;
+}
+
+void fb_set_font(font_family_t family) {
+	switch(family) {
+		case FONT_10x18:
+			font = &font_10x18;
+			break;
+		case FONT_12x22:
+		default:
+			font = &font_12x22;
+			break;
+		case FONT_18x32:
+			font = &font_18x32;
+			break;
+	}
+}
+
 static void free_font(void) {
-	if(font_data) {
-		free(font_data);
-		font_data = NULL;
+	if(font_10x18.rundata) {
+		free(font_10x18.rundata);
+		font_10x18.rundata = NULL;
+	}
+	if(font_12x22.rundata) {
+		free(font_12x22.rundata);
+		font_12x22.rundata = NULL;
+	}
+	if(font_18x32.rundata) {
+		free(font_18x32.rundata);
+		font_18x32.rundata = NULL;
 	}
 }
 
@@ -255,28 +298,28 @@ static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* d
 }
 
 int fb_font_width() {
-	return font.cwidth;
+	return font->cwidth;
 }
 
 int fb_font_height() {
-	return font.cheight;
+	return font->cheight;
 }
 
 void fb_text(int x, int y, const char *s, int color, int bold, int size) {
     unsigned off;
     
-    bold = bold && (font.height != font.cheight);
+    bold = bold && (font->height != font->cheight);
 
     while((off = *s++)) {
         off -= 32;
-        if (outside(x, y) || outside(x + font.cwidth * size - 1, y + font.cheight - 1)) break;
+        if (outside(x, y) || outside(x + font->cwidth * size - 1, y + font->cheight - 1)) break;
         if (off < 96) {
-            unsigned char* src_p = font_data + (off * font.cwidth) + (bold ? font.cheight * font.width : 0);
+            unsigned char* src_p = font->rundata + (off * font->cwidth) + (bold ? font->cheight * font->width : 0);
             unsigned char* dst_p = (unsigned char*) fb_newbuf + y * fb_xsize + x * fb_bpp / 8;
 
-            text_blend(src_p, font.width, dst_p, fb_xsize, font.cwidth, font.cheight, color, size);
+            text_blend(src_p, font->width, dst_p, fb_xsize, font->cwidth, font->cheight, color, size);
         }
-        x += font.cwidth * size;
+        x += font->cwidth * size;
     }
 }
 
