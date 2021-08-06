@@ -15,6 +15,8 @@ fbtest: fb.o test.o
 
 fb.o game.o test.o: fb.h
 
+fb.o: font_10x18.h 
+
 %.o: %.c
 	@echo CC $@
 	@$(CC) -o $@ -c $< $(CFLAGS)

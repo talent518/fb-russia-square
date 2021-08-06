@@ -472,8 +472,6 @@ void game_render(void) {
 
 		x = X + (WIDTH_SHAPE_NUM * side - fb_font_width() * sz * strlen(str)) / 2;
 		y = Y + offset + overOffset;
-		fb_text(x - 1, y - 1, str, fb_color_add(overColor, 0x33), 1, sz);
-		fb_text(x + 1, y + 1, str, fb_color_add(overColor, -0x33), 1, sz);
 		fb_text(x, y, str, overColor, 1, sz);
 		
 		overOffset += step * overStep;

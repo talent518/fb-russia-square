@@ -207,11 +207,12 @@ static void init_font(void) {
 
 	dprintf("font_data size is %.3lfKB\n", sz / 1024.0f);
 
-	unsigned char data;
-    unsigned char* in = font.rundata;
+	unsigned short data;
+    unsigned short* in = font.rundata;
     while((data = *in++)) {
-        memset(bits, (data & 0x80) ? 255 : 0, data & 0x7f);
-        bits += (data & 0x7f);
+    	sz = (data >> 8) & 0xff;
+        memset(bits, data & 0xff, sz);
+        bits += sz;
     }
 }
 
@@ -228,6 +229,7 @@ static bool outside(int x, int y) {
 
 static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* dst_p, int dst_row_bytes, int width, int height, int color, int size) {
     int i, j;
+    unsigned char *clr = (unsigned char *) &color;
     int cx = size, cy = size;
     for (j = 0; j < height * size; ++j) {
         unsigned char* sx = src_p;
@@ -238,11 +240,12 @@ static void text_blend(unsigned char* src_p, int src_row_bytes, unsigned char* d
             	cx = size;
             	sx ++;
             }
-            if (a == 255) {
+            if(a == 0xff) {
             	memcpy(px, &color, fb_bpp / 8);
-            } else if (a > 0) {
-            	int color2 = color | (a << 24);
-                memcpy(px, &color2, fb_bpp / 8);
+            } else {
+                px[0] += (clr[0] - px[0]) * a / 250.0f;
+                px[1] += (clr[1] - px[1]) * a / 250.0f;
+                px[2] += (clr[2] - px[2]) * a / 250.0f;
             }
 			px += fb_bpp / 8;
         }
@@ -265,7 +268,7 @@ int fb_font_height() {
 void fb_text(int x, int y, const char *s, int color, int bold, int size) {
     unsigned off;
     
-    bold = bold && (font.height != font.cheight);
+    bold = 0; // bold && (font.height != font.cheight);
 
     while((off = *s++)) {
         off -= 32;
