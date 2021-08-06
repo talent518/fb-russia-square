@@ -343,7 +343,7 @@ void fb_fill_round_rect(int x, int y, int width, int height, unsigned int color,
 			p = p2;
 			for(x = 0; x < corner; x ++) {
 				r = sqrt(pow(x - points[i].x0, 2) + pow(y - points[i].y0, 2));
-				if(r <= corner) memcpy(p, &color, fb_bpp / 8);
+				if(r < corner) memcpy(p, &color, fb_bpp / 8);
 				p += fb_bpp / 8;
 			}
 			p2 += fb_xsize;
@@ -378,7 +378,7 @@ void fb_draw_round_rect(int x, int y, int width, int height, unsigned int color,
 			p = p2;
 			for(x = 0; x < corner; x ++) {
 				r = sqrt(pow(x - points[i].x0, 2) + pow(y - points[i].y0, 2));
-				if(r <= corner && r >= corner - weight) memcpy(p, &color, fb_bpp / 8);
+				if(r < corner && r >= corner - weight) memcpy(p, &color, fb_bpp / 8);
 				p += fb_bpp / 8;
 			}
 			p2 += fb_xsize;

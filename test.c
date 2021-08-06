@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
 
 		fb_fill_round_rect(FB_W - 175, 25, 150, 150, 0xff996633, 50);
 		fb_draw_round_rect(FB_W - 175, FB_H - 175, 150, 150, 0xff996633, 2, 50);
+		fb_draw_circle(FB_W - 175, FB_H - 175, 50, 0xff00ffff, 2);
 
 		END_TIME();
 		BEGIN_TIME();
