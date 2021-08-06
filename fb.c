@@ -317,6 +317,75 @@ void fb_draw_rect(int x, int y, int width, int height, unsigned int color, int w
 	}
 }
 
+void fb_fill_round_rect(int x, int y, int width, int height, unsigned int color, int corner) {
+	int i, r;
+	char *p, *p2;
+
+	struct {
+		int x;
+		int y;
+		int x0;
+		int y0;
+	} points[] = {
+		{x, y, corner - 1, corner - 1}, // left top
+		{x, y + height - corner, corner - 1, 0}, // left bottom
+		{x + width - corner, y, 0, corner - 1}, // right top
+		{x + width - corner, y + height - corner, 0, 0} // right bottom
+	};
+
+	fb_fill_rect(x + corner, y, width - corner * 2, corner, color); // top
+	fb_fill_rect(x, y + corner, width, height - corner * 2, color); // center
+	fb_fill_rect(x + corner, y + height - corner, width - corner * 2, corner, color); // bottom
+
+	for(i = 0; i < sizeof(points)/sizeof(points[0]); i ++) {
+		p2 = fb_newbuf + points[i].y * fb_xsize + points[i].x * fb_bpp / 8;
+		for(y = 0; y < corner; y ++) {
+			p = p2;
+			for(x = 0; x < corner; x ++) {
+				r = sqrt(pow(x - points[i].x0, 2) + pow(y - points[i].y0, 2));
+				if(r <= corner) memcpy(p, &color, fb_bpp / 8);
+				p += fb_bpp / 8;
+			}
+			p2 += fb_xsize;
+		}
+	}
+}
+
+void fb_draw_round_rect(int x, int y, int width, int height, unsigned int color, int weight, int corner) {
+	int i, r;
+	char *p, *p2;
+
+	struct {
+		int x;
+		int y;
+		int x0;
+		int y0;
+	} points[] = {
+		{x, y, corner - 1, corner - 1}, // left top
+		{x, y + height - corner, corner - 1, 0}, // left bottom
+		{x + width - corner, y, 0, corner - 1}, // right top
+		{x + width - corner, y + height - corner, 0, 0} // right bottom
+	};
+
+	fb_fill_rect(x + corner, y, width - corner * 2, weight, color); // top
+	fb_fill_rect(x, y + corner, weight, height - corner * 2, color); // left
+	fb_fill_rect(x + corner, y + height - weight, width - corner * 2, weight, color); // bottom
+	fb_fill_rect(x + width - weight, y + corner, weight, height - corner * 2, color); // right
+
+	for(i = 0; i < sizeof(points)/sizeof(points[0]); i ++) {
+		p2 = fb_newbuf + points[i].y * fb_xsize + points[i].x * fb_bpp / 8;
+		for(y = 0; y < corner; y ++) {
+			p = p2;
+			for(x = 0; x < corner; x ++) {
+				r = sqrt(pow(x - points[i].x0, 2) + pow(y - points[i].y0, 2));
+				if(r <= corner && r >= corner - weight) memcpy(p, &color, fb_bpp / 8);
+				p += fb_bpp / 8;
+			}
+			p2 += fb_xsize;
+		}
+	}
+}
+
 void fb_draw_line(int x1, int y1, int x2, int y2, unsigned int color, int weight) {
 	int x, y;
 	char *p, *p2;
@@ -436,6 +505,7 @@ void fb_draw_oval(int x, int y, int width, int height, unsigned int color, int w
 void fb_fill_circle(int x, int y, int radius, unsigned int color) {
 	char *p, *p2;
 	int side = radius * 2;
+
 	x -= radius;
 	y -= radius;
 

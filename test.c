@@ -74,6 +74,12 @@ int main(int argc, char *argv[]) {
 		END_TIME();
 		BEGIN_TIME();
 
+		fb_fill_round_rect(FB_W - 175, 25, 150, 150, 0xff996633, 50);
+		fb_draw_round_rect(FB_W - 175, FB_H - 175, 150, 150, 0xff996633, 2, 50);
+
+		END_TIME();
+		BEGIN_TIME();
+
 		fb_draw_line(0, 0, 100, 100, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 100, 200, 0xff0000ff, 2);
 		fb_draw_line(0, 0, 100, 300, 0xff0000ff, 2);
