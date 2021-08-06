@@ -90,6 +90,23 @@ int main(int argc, char *argv[]) {
 		END_TIME();
 		BEGIN_TIME();
 
+		// Gradual change
+		{
+			int r1 = 0xff, g1 = 0, b1 = 0;
+			int r2 = 0, g2 = 0xff, b2 = 0;
+			float rr = (r2 - r1) / 100.0f, gg = (g2 - g1) / 100.0f, bb = (b2 - b1) / 100.0f;
+			float r, g, b;
+			int i;
+
+			for(i = 0, r = r1, g = g1, b = b1; i < 100; i ++, r += rr, g += gg, b += bb) {
+				fb_fill_rect(125, FB_H - 100 + i, 50, 1, fb_color(r, g, b));
+				fb_fill_rect(i, FB_H - 175, 1, 50, fb_color(r, g, b));
+			}
+		}
+
+		END_TIME();
+		BEGIN_TIME();
+
 		fb_draw_line(0, FB_H / 2, FB_W - 1, FB_H / 2, 0xff0000ff, 2);
 		fb_draw_line(FB_W / 2, 0, FB_W / 2, FB_H - 1, 0xff0000ff, 2);
 
@@ -99,6 +116,7 @@ int main(int argc, char *argv[]) {
 		END_TIME();
 		BEGIN_TIME();
 		
+		// five-pointed star
 		{
 			int x = (FB_W / 2), y = (FB_H / 2);
 			int r = min(FB_W / 3, FB_H / 3);
