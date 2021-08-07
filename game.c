@@ -76,11 +76,11 @@ int main(int argc, char *argv[]) {
 			if(fcntl(0, F_SETFL, flag) == -1) eprintf("fcntl F_GETFL");
 		}
 	}
+
+	game_init();
 	
 	signal(SIGALRM, signal_handler);
 	game_timer();
-
-	game_init();
 
 	fprintf(stdout, "\033[?25l"); // hide cursor
 	fflush(stdout);
@@ -323,6 +323,29 @@ bool game_shape_point(int p, int x, int y) {
 	return (p & (1 << (16 - (x + 1 + y * 4))));
 }
 
+typedef struct {
+	float real;
+	float imag;
+} complex;
+
+int cal_pixel(complex c) {
+	int count;
+	complex z;
+	float temp, lengthsq;
+	z.real = 0;
+	z.imag = 0;
+	count = 0;
+	do {
+		temp = z.real * z.real - z.imag * z.imag + c.real;
+		z.imag = 2 * z.real * z.imag + c.imag;
+		z.real = temp;
+		lengthsq = z.real * z.real + z.imag * z.imag;
+		count++;
+	} while ((lengthsq < 4.0) && (count < 291));
+
+	return count - 0x24;
+}
+
 static bool is_help = true;
 void game_render(void) {
 	const int side = fb_height / (HEIGHT_SHAPE_NUM + 2);
@@ -419,19 +442,60 @@ void game_render(void) {
 
 		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], gray, 0, 1);
 		
-		// Gradual change: vertical
+		// Mandelbrot set
 		{
-			int r1 = 0, g1 = 0, b1 = 0xff;
-			int r2 = 0xff, g2 = 0xff, b2 = 0;
-			int w = X - Y;
-			float rr = (float) (r2 - r1) / (float) fb_height, gg = (float) (g2 - g1) / (float) fb_height, bb = (float) (b2 - b1) / (float) fb_height;
-			float r, g, b;
-			int i;
+		#define mset 2 // recommand 0,2,4
+		#if mset == 1
+			float real_min = -0.84950f, imag_min = 0.21000f;
+			float real_max = -0.84860f, imag_max = 0.21090f;
+			#define mcolor color
+		#elif mset == 2
+			float real_min = 0.32000f, imag_min = -0.45000f;
+			float real_max = 0.50000f, imag_max = 0.05000f;
+			#define mcolor 0xff - color
+		#elif mset == 3
+			float real_min = 0.26304f, imag_min = 0.00233f;
+			float real_max = 0.26329f, imag_max = 0.00267f;
+			#define mcolor color
+		#elif mset == 4
+			float real_min = -0.63500f, imag_min = 0.68000f;
+			float real_max = -0.62500f, imag_max = 0.69000f;
+			#define mcolor 0xff - color
+		#elif mset == 5
+			float real_min = -0.46510f, imag_min = -0.56500f;
+			float real_max = -0.46470f, imag_max = -0.56460f;
+			#define mcolor 0xff - color
+		#else
+			float real_min = -1.50000f, imag_min = -1.00000f;
+			float real_max = 0.50000f, imag_max = 1.00000f;
+			#define mcolor 0xff - color
+		#endif
+		#undef mset
+			int w = X - Y / 2;
+			int x2 = fb_width - w;
+			complex c;
+			float scale_real = (real_max - real_min) / w;
+			float scale_imag = (imag_max - imag_min) / fb_height;
+			int r, g, b;
+			int color;
 
-			for(i = 0, r = r1, g = g1, b = b1; i < fb_height; i ++, r += rr, g += gg, b += bb) {
-				fb_fill_rect(0, i, w, 1, fb_color(r, g, b));
-				fb_fill_rect(fb_width - w, i, w, 1, fb_color(g, b, r));
+			for(y = 0; y < fb_height; y ++) {
+				c.imag = imag_min + ((float) y * scale_imag);
+				r = ((int) ((y + 1) * 255.0f / (float) fb_height)) & 0xff;
+				for(x = 0; x < w; x ++) {
+					c.real = real_min + ((float) x * scale_real);
+					color = cal_pixel(c);
+
+					g = ((int) ((x + 1) * 255.0f / (float) w)) & 0xff;
+					b = mcolor;
+					// printf("%06x\n", b);
+
+					color = fb_color(b, g, r);
+					fb_draw_point(x, y, color);
+					fb_draw_point(x2 + w - 1 - x, y, color);
+				}
 			}
+		#undef mcolor
 		}
 		
 		// Gradual change: vertical

@@ -84,11 +84,13 @@ int fb_init(const char *path) {
 }
 
 int fb_color(int red, int green, int blue) {
-	int mask = (1 << fb_vinfo.red.length) - 1;
+	int rmask = (1 << fb_vinfo.red.length) - 1;
+	int gmask = (1 << fb_vinfo.green.length) - 1;
+	int bmask = (1 << fb_vinfo.blue.length) - 1;
 
-	red &= mask;
-	green &= mask;
-	blue &= mask;
+	red &= rmask;
+	green &= gmask;
+	blue &= bmask;
 
 	return (red << fb_vinfo.red.offset) | (green << fb_vinfo.green.offset) | (blue << fb_vinfo.blue.offset) | (fb_vinfo.transp.length ? (0xff << fb_vinfo.transp.offset) : 0);
 }
