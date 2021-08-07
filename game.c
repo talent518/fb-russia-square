@@ -327,8 +327,13 @@ static bool is_help = true;
 void game_render(void) {
 	const int side = fb_height / (HEIGHT_SHAPE_NUM + 2);
 	const int X = (fb_width - (WIDTH_SHAPE_NUM + 5) * side) / 2, Y = (fb_height - HEIGHT_SHAPE_NUM * side) / 2;
+	const int X2 = X + (WIDTH_SHAPE_NUM + 1) * side;
+	const int bdcolor = 0xff666666;
+	int Y2 = Y;
 	int x, y;
 	int x2, y2;
+
+	fb_draw_rect(X - 3, Y - 3, WIDTH_SHAPE_NUM * side + 6, HEIGHT_SHAPE_NUM * side + 6, bdcolor, 1);
 
 	for(y = 0; y < HEIGHT_SHAPE_NUM; y ++) {
 		for(x = 0; x < WIDTH_SHAPE_NUM; x ++) {
@@ -344,11 +349,13 @@ void game_render(void) {
 		}
 	}
 
+	fb_draw_rect(X2 - 3, Y2 - 3, 4 * side + 6, 4 * side + 6, bdcolor, 1);
+
 	for(y = 0; y < 4; y ++) {
 		for(x = 0; x < 4; x ++) {
 			// draw next shape
-			x2 = X + (WIDTH_SHAPE_NUM + 1) * side + x * side;
-			y2 = Y + y * side;
+			x2 = X2 + x * side;
+			y2 = Y2 + y * side;
 			if(game_shape_point(nextShape, x, y)) {
 				game_draw(x2, y2, side, nextColor);
 			} else {
@@ -356,26 +363,35 @@ void game_render(void) {
 			}
 		}
 	}
+	
+	Y2 += 4 * side;
 
 	fb_set_font(FONT_12x22);
 	
 	// draw scores and lines
 	{
 		char str[20];
-		x = X + (WIDTH_SHAPE_NUM + 1) * side;
-		y = Y + 4.5f * side;
+		Y2 += side;
+		
+		fb_draw_rect(X2 - 3, Y2 - 3, 4 * side + 6, fb_font_height() * 2.6f + 6, bdcolor, 1);
+
+		Y2 += fb_font_height() * 0.2f;
 
 		sprintf(str, "%d", scoreNum);
-		fb_fill_rect(x, y, fb_width - x, fb_font_height(), 0);
-		fb_text(x, y, "SCORE:", 0xffffffff, 0, 1);
-		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x66, 0), 1, 1);
+		fb_fill_rect(X2, Y2, 4 * side, fb_font_height(), 0);
+		fb_text(X2 + 3, Y2, "SCORE:", 0xffcccccc, 0, 1);
+		fb_text(X2 + fb_font_width() * 7, Y2, str, fb_color(0xff, 0x66, 0), 1, 1);
 
-		y += fb_font_height() * 1.2f;
+		Y2 += fb_font_height() * 1.2f;
+		fb_fill_rect(X2 - 3, Y2 - 1, 4 * side + 6, 1, bdcolor);
+		Y2 += fb_font_height() * 0.2f;
 
 		sprintf(str, "%d", lineNum);
-		fb_fill_rect(x, y, fb_width - x, fb_font_height(), 0);
-		fb_text(x, y, " LINE:", 0xffffffff, 0, 1);
-		fb_text(x + fb_font_width() * 7, y, str, fb_color(0xff, 0x33, 0), 1, 1);
+		fb_fill_rect(X2, Y2, 4 * side, fb_font_height() - 1, 0);
+		fb_text(X2 + 3, Y2, " LINE:", 0xffcccccc, 0, 1);
+		fb_text(X2 + fb_font_width() * 7, Y2, str, fb_color(0xff, 0x33, 0), 1, 1);
+
+		Y2 += fb_font_height() * 1.2f;
 	}
 
 	fb_set_font(FONT_10x18);
@@ -385,32 +401,83 @@ void game_render(void) {
 		int i;
 		int fh = fb_font_height();
 		int gray = fb_color(0x99, 0x99, 0x99);
+		int slen = 0;
 
 		is_help = false;
+		
+		for(i = 0; i < HELPLEN; i ++) {
+			x2 = strlen(HELPS[i]);
+			if(x2 > slen) slen = x2;
+		}
 
-		x = X + (WIDTH_SHAPE_NUM + 1) * side;
-		y = Y + (HEIGHT_SHAPE_NUM * side - HELPLEN * fh) / 2;
+		x2 = slen * fb_font_width();
+		y2 = HELPLEN * fh;
+		x = X2 + 4 * side - x2;
+		y = Y2 + (Y + (HEIGHT_SHAPE_NUM - 5) * side - Y2 - y2) / 2;
+		
+		fb_draw_rect(x - 3, y - 3, x2 + 6, y2 + 6, bdcolor, 1);
 
 		for(i = 0; i < HELPLEN; i ++) fb_text(x, y + i * fh, HELPS[i], gray, 0, 1);
+		
+		// Gradual change: vertical
+		{
+			int r1 = 0, g1 = 0, b1 = 0xff;
+			int r2 = 0xff, g2 = 0xff, b2 = 0;
+			int w = X - Y;
+			float rr = (float) (r2 - r1) / (float) fb_height, gg = (float) (g2 - g1) / (float) fb_height, bb = (float) (b2 - b1) / (float) fb_height;
+			float r, g, b;
+			int i;
+
+			for(i = 0, r = r1, g = g1, b = b1; i < fb_height; i ++, r += rr, g += gg, b += bb) {
+				fb_fill_rect(0, i, w, 1, fb_color(r, g, b));
+				fb_fill_rect(fb_width - w, i, w, 1, fb_color(g, b, r));
+			}
+		}
+		
+		// Gradual change: vertical
+		{
+			int r1 = 0xff, g1 = 0, b1 = 0;
+			int r2 = 0, g2 = 0xff, b2 = 0;
+			int w = Y / 2;
+			float rr = (float) (r2 - r1) / (float) fb_height, gg = (float) (g2 - g1) / (float) fb_height, bb = (float) (b2 - b1) / (float) fb_height;
+			float r, g, b;
+			int i;
+
+			for(i = 0, r = r1, g = g1, b = b1; i < fb_height; i ++, r += rr, g += gg, b += bb) {
+				fb_fill_rect(X - Y, i, w, 1, fb_color(r, g, b));
+				fb_fill_rect(fb_width - X + w, i, w, 1, fb_color(g, b, r));
+			}
+		}
+
+		// Gradual change: horizontal
+		{
+			int r1 = 0xff, g1 = 0, b1 = 0;
+			int r2 = 0, g2 = 0, b2 = 0xff;
+			int h = Y / 2;
+			int w = 2 * h + (WIDTH_SHAPE_NUM + 5) * side;
+			float rr = (float) (r2 - r1) / (float) w, gg = (float) (g2 - g1) / (float) w, bb = (float) (b2 - b1) / (float) w;
+			float r, g, b;
+			int i;
+
+			for(i = 0, r = r1, g = g1, b = b1; i < w; i ++, r += rr, g += gg, b += bb) {
+				fb_fill_rect(X - h + i, 0, 1, h, fb_color(r, g, b));
+				fb_fill_rect(X - h + w - 1 - i, fb_height - h, 1, h, fb_color(r, b, g));
+			}
+		}
 	}
 
-	fb_set_font(FONT_10x18);
+	fb_set_font(FONT_12x22);
 	
-	// draw lines
-	{
-		char str[10];
-		x = X + (WIDTH_SHAPE_NUM + 1) * side + (4 * side - fb_font_width() * 8) / 2;
-		y = Y + (HEIGHT_SHAPE_NUM - 4) * side - fb_font_height() - 5;
-		fb_fill_rect(x, y, fb_font_width() * 8, fb_font_height(), 0);
-		fb_text(x, y, str, 0xffffffff, 1, 1);
-	}
+	Y2 = Y + (HEIGHT_SHAPE_NUM - 5) * side;
+	
+	fb_draw_rect(X2 - 3, Y2 - 3, 4 * side + 6, 5 * side + 6, bdcolor, 1);
 	
 	// draw time
 	{
 		const time_t t = time(NULL);
 		struct tm tm;
 		const int radius = side * 2;
-		const int x0 = X + (WIDTH_SHAPE_NUM + 3) * side, y0 = Y + (HEIGHT_SHAPE_NUM - 2) * side;
+		const int x0 = X2 + 2 * side, y0 = Y2 + 3 * side;
 		double angle;
 		int weight;
 
@@ -419,10 +486,12 @@ void game_render(void) {
 		{
 			char str[10];
 			sprintf(str, "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
-			x = X + (WIDTH_SHAPE_NUM + 1) * side + (4 * side - fb_font_width() * 8) / 2;
-			y = Y + (HEIGHT_SHAPE_NUM - 4) * side - fb_font_height() - 5;
-			fb_fill_rect(x, y, fb_width - x, fb_height - y, 0);
-			fb_text(x, y, str, 0xffffffff, 1, 1);
+			x = X2 + (4 * side - fb_font_width() * 8) / 2;
+			y = Y2 + (side - fb_font_height()) / 2;
+			fb_fill_rect(X2, Y2, 4 * side, side, 0);
+			fb_text(x, y, str, 0xffffffff, 0, 1);
+
+			fb_draw_rect(X2, Y2, 4 * side, side + 1, 0xffffffff, 1);
 		}
 		
 		// background and border
