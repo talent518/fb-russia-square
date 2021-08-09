@@ -391,12 +391,12 @@ void game_render(void) {
 
 	fb_set_font(FONT_12x22);
 	
-	// draw scores and lines
+	// draw scores, lines and grade
 	{
 		char str[20];
 		Y2 += side;
 		
-		fb_draw_rect(X2 - 3, Y2 - 3, 4 * side + 6, fb_font_height() * 2.6f + 6, bdcolor, 1);
+		fb_draw_rect(X2 - 3, Y2 - 3, 4 * side + 6, fb_font_height() * 4.0f + 6, bdcolor, 1);
 
 		Y2 += fb_font_height() * 0.2f;
 
@@ -412,6 +412,15 @@ void game_render(void) {
 		sprintf(str, "%d", lineNum);
 		fb_fill_rect(X2, Y2, 4 * side, fb_font_height() - 1, 0);
 		fb_text(X2 + 3, Y2, " LINE:", 0xffcccccc, 0, 1);
+		fb_text(X2 + fb_font_width() * 7, Y2, str, fb_color(0xff, 0x33, 0), 1, 1);
+
+		Y2 += fb_font_height() * 1.2f;
+		fb_fill_rect(X2 - 3, Y2 - 1, 4 * side + 6, 1, bdcolor);
+		Y2 += fb_font_height() * 0.2f;
+
+		sprintf(str, "%d", MAX_GRADE + 1 - maxGrade);
+		fb_fill_rect(X2, Y2, 4 * side, fb_font_height() - 1, 0);
+		fb_text(X2 + 3, Y2, "GRADE:", 0xffcccccc, 0, 1);
 		fb_text(X2 + fb_font_width() * 7, Y2, str, fb_color(0xff, 0x33, 0), 1, 1);
 
 		Y2 += fb_font_height() * 1.2f;
