@@ -77,13 +77,14 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	fprintf(stdout, "\033[?25l"); // hide cursor
+	fflush(stdout);
+
 	game_init();
 	
 	signal(SIGALRM, signal_handler);
 	game_timer();
 
-	fprintf(stdout, "\033[?25l"); // hide cursor
-	fflush(stdout);
 	while(is_running) {
 		fd_set set;
 		
@@ -426,12 +427,12 @@ void game_render(void) {
 		Y2 += fb_font_height() * 1.2f;
 	}
 
-	fb_set_font(FONT_10x18);
+	fb_set_font(FONT_08x14);
 	
 	// draw help
 	if(is_help) {
 		int i;
-		int fh = fb_font_height();
+		int fh = fb_font_height() + 1;
 		int gray = fb_color(0x99, 0x99, 0x99);
 		int slen = 0;
 
@@ -518,7 +519,7 @@ void game_render(void) {
 
 			for(i = 0, r = r1, g = g1, b = b1; i < fb_height; i ++, r += rr, g += gg, b += bb) {
 				fb_fill_rect(X - Y, i, w, 1, fb_color(r, g, b));
-				fb_fill_rect(fb_width - X + w, i, w, 1, fb_color(g, b, r));
+				fb_fill_rect(fb_width - X - 1 + w, i, w, 1, fb_color(g, b, r));
 			}
 		}
 

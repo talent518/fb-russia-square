@@ -224,12 +224,14 @@ static void font_rundata(font_t *font) {
     }
 }
 
+#include "font_08x14.h"
 #include "font_10x18.h"
 #include "font_12x22.h"
 #include "font_18x32.h"
 static font_t *font = NULL;
 
 static void init_font(void) {
+	font_rundata(&font_08x14);
 	font_rundata(&font_10x18);
 	font_rundata(&font_12x22);
 	font_rundata(&font_18x32);
@@ -239,6 +241,9 @@ static void init_font(void) {
 
 void fb_set_font(font_family_t family) {
 	switch(family) {
+		case FONT_08x14:
+			font = &font_08x14;
+			break;
 		case FONT_10x18:
 			font = &font_10x18;
 			break;

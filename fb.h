@@ -25,7 +25,8 @@ int fb_color(int red, int green, int blue);
 int fb_color_add(int color, int add);
 
 typedef enum {
-	FONT_10x18 = 1,
+	FONT_08x14 = 1,
+	FONT_10x18,
 	FONT_12x22,
 	FONT_18x32,
 } font_family_t;
