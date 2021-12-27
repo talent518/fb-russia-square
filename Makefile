@@ -5,7 +5,7 @@ LFLAGS := $(LFLAGS) -lm -pthread
 all: fbrussia fbtest
 	@echo -n
 
-fbrussia: fb.o game.o
+fbrussia: api.o fb.o game.o
 	@echo LD $@
 	@$(CC) -o $@ $^ $(LFLAGS)
 

@@ -16,9 +16,8 @@
 #include <math.h>
 #include <time.h>
 
-#include <termio.h>
-
 #include "fb.h"
+#include "api.h"
 
 volatile unsigned int is_running = 1;
 
@@ -45,8 +44,6 @@ static void signal_handler(int sig) {
 
 int main(int argc, char *argv[]) {
 	int ret;
-	struct timeval tv;
-	struct termios newset, oldset;
 
 	if(argc >= 2) ret = fb_init(argv[1]);
 	else ret = fb_init("/dev/fb0");
@@ -59,13 +56,7 @@ int main(int argc, char *argv[]) {
 
 	if(fb_save() == FB_ERR) eprintf("save failed\n");
 	
-	// Single character key for one-time reading
-	tcgetattr(0, &oldset);
-	memcpy(&newset, &oldset, sizeof(oldset));
-	newset.c_lflag &= ~(ICANON|ECHO|ECHOE|ECHOK|ECHOPRT|ECHOKE|ICRNL);
-	newset.c_cc[VTIME] = 0;
-	newset.c_cc[VMIN] = 1;
-	tcsetattr(0, TCSANOW, &newset);
+	init_key();
 	
 	{
 		int flag = fcntl(0, F_GETFL);
@@ -86,27 +77,17 @@ int main(int argc, char *argv[]) {
 	game_timer();
 
 	while(is_running) {
-		fd_set set;
-		
-		FD_ZERO(&set);
-		FD_SET(0, &set); // stdin
-
-		tv.tv_sec = 0;
-		tv.tv_usec = 40000; // 40ms
-		
-		ret = select(1, &set, NULL, NULL, &tv);
+		ret = read_key(1);
 		if(ret > 0) {
-			game_key(getchar());
-		} else if(ret != 0 && errno != EINTR) {
-			pprintf("select stdin error");
+			game_key(ret);
+		} else if(ret < 0) {
 			is_running = 0;
 		}
 	};
 	fprintf(stdout, "\033[?25h"); // show cursor
 	fflush(stdout);
 
-	// restore old set
-	tcsetattr(0, TCSANOW, &oldset);
+	restore_key();
 
 	if(fb_restore() == FB_ERR) eprintf("restore failed\n");
 
@@ -131,32 +112,22 @@ void game_key_fall(void);
 void game_start(void);
 void game_pause(void);
 
-static int key_idx = 0;
 void game_key(int key) {
-	if(key == 0x1b) {
-		key_idx = 2;
-		dprintf("KEY [%02x]\n", key);
-		return;
-	} else if(key_idx > 0) {
-		dprintf("KEY [%02x]\n", key);
-		if(key == 0x5b) key_idx = 2;
-		else if(key == 0x4f) key_idx = 1;
-		else --key_idx;
-		return;
-	} else {
-		dprintf("KEY {%02x}\n", key);
-	}
 	switch(key) {
+		case 0x1b:
 		case 'q':
 		case 'Q':
 			is_running = 0;
 			break;
+		case KEY_F1:
 		case '[': // start game
 			game_start();
 			break;
+		case KEY_F2:
 		case ']': // pause game
 			game_pause();
 			break;
+		case KEY_LEFT:
 		case '4':
 		case 'a':
 		case 'A':
@@ -164,6 +135,7 @@ void game_key(int key) {
 		case 'J': // left move
 			game_key_left();
 			break;
+		case KEY_RIGHT:
 		case '6':
 		case 'd':
 		case 'D':
@@ -171,6 +143,7 @@ void game_key(int key) {
 		case 'L': // right move
 			game_key_right();
 			break;
+		case KEY_DOWN:
 		case '5':
 		case 's':
 		case 'S':
@@ -178,6 +151,7 @@ void game_key(int key) {
 		case 'K': // down move
 			game_key_down();
 			break;
+		case KEY_UP:
 		case '8':
 		case 'w':
 		case 'W':
@@ -205,14 +179,14 @@ static const int COLOR_NUM = sizeof(COLORS) / sizeof(int);
 const char *HELPS[] = {
 	"      HELP    ",
 	"--------------",
-	"Start: [",
-	"Pause: ]",
-	"Trans: 8 w i",
-	" Left: 4 a j",
-	"Right: 6 d l",
-	" Down: 5 s k",
+	"Start: [ F1",
+	"Pause: ] F2",
+	"Trans: 8 w i Up",
+	" Left: 4 a j Left",
+	"Right: 6 d l Right",
+	" Down: 5 s k Down",
 	" Fall: 0 Space",
-	" Quit: q Q"
+	" Quit: q Q ESC"
 };
 const int HELPLEN = sizeof(HELPS) / sizeof(HELPS[0]);
 
